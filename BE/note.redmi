@@ -1,0 +1,67 @@
+src/
+│
+├── config/
+│   ├── db.js              # Kết nối MongoDB
+│   └── env.js             # ENV và config
+│
+├── models/                #Các models này là bảng trong MongoDB. Mỗi model dùng để lưu 1 loại dữ liệu trong app thương mại điện tử.
+│   ├── User.js            # Có role (user / admin)
+                            Đăng ký / đăng nhập, Lưu mật khẩu đã hash, Phân quyền (admin / user), Lưu địa chỉ giao hàng
+│   ├── Product.js          Giá, Mô tả, Ảnh, Size (S/M/L), Màu, Tồn kho, Danh mục
+│   ├── Category.js
+│   ├── Order.js
+│   ├── Cart.js
+│   └── Review.js
+|   |__Voucher.js
+│
+├── controllers/
+│   ├── auth.controller.js     Controller gọi service → trả response ra API
+│   ├── user.controller.js     xử lý logic liên quan tới user: Lấy profile user đang login, Cập nhật tên, avatar,sdt, Thêm/xóa địa chỉ giao hàng
+│   ├── product.controller.js  xử lý tất cả logic liên quan tới sản phẩm. xem, sửa, xóa, thêm
+│   ├── order.controller.js    xử lý toàn bộ logic liên quan đơn hàng: Gọi từ cart để tạo đơn, Tính tổng tiền, Check tồn kho từng variant, Giảm tồn kho
+|                               User xem đơn của họ, Admin xem tất cả đơn, Admin cập nhật trạng thái đơn
+│   ├── category.controller.js   xử lý logic Admin tạo category, Lấy tất cả, Update, Xóa category
+│   └── upload.controller.js     xử lý Upload ảnh bằng Cloudinary (Bắt buộc cho sản phẩm), upload, xoá, sửa, xem
+|   |__cart.controller.js       xử lý logic giỏ hàng: Lấy giỏ hàng, Thêm sản phẩm vào giỏ, Cập nhật số lượng, Xóa một dòng,Xóa toàn bộ giỏ
+│   |__review.controller.js      xử lý toàn bộ logic về review. User viết review (nếu đã mua sản phẩm), User sửa review của chính họ
+|                                 User xoá review của chính họ, Lấy review của một sản phẩm
+|   |__admin.controller.js     admin xem: Tổng số user, Tổng số đơn hàng, Tổng số sản phẩm
+|                               Tổng doanh thu (đơn completed), Top sản phẩm bán chạy,Doanh thu theo tháng
+|                                
+|   |__wishlist.controller.js   user: Thêm sản phẩm vào danh sách yêu thích, Xóa sản phẩm khỏi yêu thích, Xem danh sách yêu thích Không cho trùng (mỗi sản phẩm 1 lần)
+|   |__voucher.controller.js     Admin tạo mã giảm giá, User nhập mã khi checkout, Backend kiểm tra mã có hợp lệ không
+                                 Áp dụng giảm giá, tự động trừ số lượng mã còn lại, vô hiệu mã hết hạn, Admin bật/tắt mã, xoá mã
+|
+├── routes/
+│   ├── auth.routes.js       Định nghĩa API endpoint
+│   ├── user.routes.js       Khai báo endpoint của user. Chỉ user đã login mới được dùng → dùng verifyToken
+│   ├── product.routes.js    định nghĩa URL của product
+│   ├── order.routes.js       định nghĩa 
+│   ├── category.routes.js   khai báo endpoint, Chỉ admin mới được tạo / update / delete category. User và admin đều xem được danh sách
+│   └── upload.routes.js
+|   |__ cart.routes.js
+|   |__ review.routes.js
+|   |__admin.routes.js     khai báo API dành cho admin, → phải đăng nhập, phải là admin mới xem được
+|   |__wishlist.routes.js   user phải đăng nhập, Không yêu cầu admin
+    |__voucher.routes.js
+│
+├── middlewares/
+│   ├── auth.middleware.js      Dùng để check người dùng có đăng nhập không.   # verifyToken()
+│   ├── role.middleware.js      # requireRole("admin"). phân quyền
+│   ├── error.middleware.js     bắt lỗi
+│   └── upload.middleware.js    Upload ảnh bằng Cloudinary (Bắt buộc cho sản phẩm)
+│
+├── services/
+│   ├── auth.service.js           Nơi xử lý logic: hash password + kiểm tra password
+|   |__mail.service.js            gửi mail( báo đơn hàng về mail)
+│   
+│   
+│   
+│
+├── utils/
+│   ├── generateToken.js      Tạo accessToken & refreshToken
+│   
+│
+├── app.js                       # express app
+
+server.js(nằm ngoài src)                    # chạy server

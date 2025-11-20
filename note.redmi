@@ -1,0 +1,71 @@
+
+lib/
+├── main.dart
+├── app.dart                     cấu hình Provider root, theme, initial route.
+├── routes/
+│   └── app_routes.dart          route tên
+│
+├── core/
+│   ├── config/                  cài đặt cấu hình
+│   │   └── api.dart             chứa BASE_URL và các endpoint backend
+│   ├── network/
+│   │   ├── api_client.dart             client chung (Dio) — quản lý header, attach token từ SecureStorage, xử lý lỗi cơ bản.
+│   │   └── api_exceptions.dart        ( chưa có)
+│   └── widgets/                       widget dùng chung ( chưa có, làm rồi thêm sau )
+│       ├── loading.dart
+│       └── custom_button.dart
+│
+├── storage/
+│   └── local_storage.dart              lưu token và user info local, dùng flutter_secure_storage cho token.
+│
+├── data/
+│   ├── models/                         model ánh xạ JSON user từ backend. Dùng fromJson/toJson.
+│   │   ├── user_model.dart             ánh xạ user
+│   │   └── product_model.dart          ánh xạ dữ liệu product từ backend về flutter
+│   └── repositories/
+│       ├── auth_repository.dart        gọi API /auth/login và /auth/register, trả result về provider.
+│       └── product_repository.dart     gọi API backend hiển thị sản phẩm
+│
+└── modules/
+    ├── auth/
+    │   ├── providers/
+    │   │   └── auth_provider.dart       Provider chứa state đăng nhập, gọi AuthRepository, lưu token vào LocalStorage.
+    │   └── views/
+    │       ├── login_page.dart         màn hình login đơn giản, gọi provider để login.
+    │       └── register_page.dart      màn hình đăng ký đơn giản, gọi provider để đăng ký.
+    │
+    ├── user/                           tất cả UI dành cho user
+    │   ├── home/
+    │   │   ├── providers/
+    │   │   │   └── product_provider.dart    ( quản lý state bên home, hiện tại chưa có gì xử lý)
+    │   │   └── views/
+    │   │       └── home_page.dart           UI Home → gọi provider lấy dữ liệu → hiển thị Grid sản phẩm ( giao diện đơn sơ để test)
+    │   │
+    │   ├── product/
+    │   │   ├── providers/                                  (state sau này thêm để xử lý product)
+    |   |       └── product_provider.dart                  quản lý state sản phẩm (loading / data / error)
+    │   │   └── views/                                        UI product
+    │   │       └──  product_detail_page.dart                 ( chưa làm, chi tiết sản phẩm) page giao diện
+│   │           └── product_list_page.dart                     ( chưa làm, list sản phẩm)
+    │   │
+    │   ├── cart/
+    │   ├── wishlist/
+    │   ├── category/
+    │   ├── review/
+    │   ├── order/
+    │   └── profile/
+    │
+    ├── admin/                          ← tất cả UI dành cho admin
+    │   ├── dashboard/      ( quản lý state)
+    │   │   └── views/      (UI)
+    │   │       └── admin_dashboard_page.dart
+    │   │
+    │   ├── products/        ( có 1 folder quản lý state xử lý và 1 folder UI)
+    │   ├── orders/
+    │   ├── categories/
+    │   ├── users/
+    │   └── vouchers/
+    │
+    └── shared/                          ← màn dùng chung Admin & User
+        ├── providers/
+        └── views/

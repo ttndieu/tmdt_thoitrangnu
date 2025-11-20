@@ -1,0 +1,57 @@
+import User from "../models/User.js";
+
+// GET /api/user/me
+export const getProfile = async (req, res) => {
+  try {
+    return res.json({ user: req.user });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+};
+
+// PUT /api/user/update
+export const updateProfile = async (req, res) => {
+  try {
+    const { name, avatar, phone } = req.body;
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { name, avatar, phone },
+      { new: true }
+    ).select("-password");
+
+    return res.json({ user });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+};
+
+// POST /api/user/address
+export const addAddress = async (req, res) => {
+  try {
+    const address = req.body;
+
+    const user = await User.findById(req.user._id);
+    user.addresses.push(address);
+    await user.save();
+
+    return res.json({ addresses: user.addresses });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+};
+
+// DELETE /api/user/address/:addressId
+export const deleteAddress = async (req, res) => {
+  try {
+    const { addressId } = req.params;
+
+    const user = await User.findById(req.user._id);
+    user.addresses = user.addresses.filter((a) => a._id.toString() !== addressId);
+    await user.save();
+
+    return res.json({ addresses: user.addresses });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+};
