@@ -69,3 +69,7 @@ lib/
     └── shared/                          ← màn dùng chung Admin & User
         ├── providers/
         └── views/
+
+
+flutter pub add image_picker
+flutter pub add slugify

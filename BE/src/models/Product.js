@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-// Schema cho các variant (size, color, stock, price)
+// Schema Variant
 const variantSchema = mongoose.Schema({
   size: { type: String, enum: ["S", "M", "L"], required: true },
   color: { type: String, required: true },
@@ -8,25 +8,33 @@ const variantSchema = mongoose.Schema({
   price: { type: Number, required: true },
 });
 
-// Schema chính Product
+// Schema Image
+const imageSchema = mongoose.Schema({
+  url: { type: String, required: true },
+  public_id: { type: String, required: true }
+});
+
+// MAIN Product schema
 const productSchema = mongoose.Schema(
   {
     name: { type: String, required: true },
     slug: { type: String, unique: true, required: true },
     description: { type: String },
-    images: [String],
+
+    images: [imageSchema],   // ⬅️ Sửa từ [String] thành [imageSchema]
+
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
     },
+
     variants: [variantSchema],
+
     sold: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
 
-// Tạo index tìm kiếm text trên name
 productSchema.index({ name: "text" });
 
-// Export model
 export default mongoose.model("Product", productSchema);

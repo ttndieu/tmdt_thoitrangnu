@@ -1,41 +1,24 @@
 import Product from "../models/Product.js";
 import Category from "../models/Category.js";
+import slugify from "slugify";
 
-// GET /api/products
+// GET ALL PRODUCTS
 export const getAllProducts = async (req, res) => {
   try {
-    const { keyword, category, size } = req.query;
+    const products = await Product.find()
+      .populate("category", "name slug");
 
-    let filters = {};
-
-    // Search theo tên
-    if (keyword) {
-      filters.name = { $regex: keyword, $options: "i" };
-    }
-
-    // Lọc theo category
-    if (category) {
-      const cat = await Category.findOne({ slug: category });
-      if (cat) filters.category = cat._id;
-    }
-
-    // Lọc theo size
-    if (size) {
-      filters["variants.size"] = size;
-    }
-
-    const products = await Product.find(filters).populate("category", "name slug");
-
-    return res.json({ count: products.length, products });
+    return res.json({ products });
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }
 };
 
-// GET /api/products/:id
+// GET BY ID
 export const getProductById = async (req, res) => {
   try {
-    const prod = await Product.findById(req.params.id).populate("category", "name");
+    const prod = await Product.findById(req.params.id)
+      .populate("category", "name slug");
 
     if (!prod) return res.status(404).json({ message: "Product not found" });
 
@@ -45,21 +28,22 @@ export const getProductById = async (req, res) => {
   }
 };
 
-// POST /api/products (admin)
+// CREATE PRODUCT
 export const createProduct = async (req, res) => {
   try {
-    const { name, slug, description, category, variants, images } = req.body;
+    const { name, description, category, variants, images } = req.body;
 
     const cat = await Category.findOne({ slug: category });
-    if (!cat) return res.status(400).json({ message: "Category not found" });
+    if (!cat)
+      return res.status(400).json({ message: "Category not found" });
 
     const product = await Product.create({
       name,
-      slug,
+      slug: slugify(name, { lower: true }),
       description,
-      category: cat._id,
+      images,      // MUST BE array of {url, public_id}
       variants,
-      images,
+      category: cat._id,
     });
 
     return res.status(201).json({ product });
@@ -68,12 +52,27 @@ export const createProduct = async (req, res) => {
   }
 };
 
-// PUT /api/products/:id (admin)
+// UPDATE PRODUCT
 export const updateProduct = async (req, res) => {
   try {
+    const { name, description, category, variants, images } = req.body;
+
+    let cat = null;
+    if (category) {
+      cat = await Category.findOne({ slug: category });
+      if (!cat) return res.status(400).json({ message: "Category not found" });
+    }
+
     const updated = await Product.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      {
+        name,
+        slug: slugify(name, { lower: true }),
+        description,
+        images,    // MUST BE array of objects
+        variants,
+        category: cat ? cat._id : undefined,
+      },
       { new: true }
     );
 
@@ -83,7 +82,7 @@ export const updateProduct = async (req, res) => {
   }
 };
 
-// DELETE /api/products/:id (admin)
+// DELETE PRODUCT
 export const deleteProduct = async (req, res) => {
   try {
     await Product.findByIdAndDelete(req.params.id);

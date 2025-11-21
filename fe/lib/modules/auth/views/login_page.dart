@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../../../routes/app_routes.dart';
+import '../../../modules/admin/admin_routes.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -200,7 +201,7 @@ class _LoginPageState extends State<LoginPage> {
                                         if (role == "admin") {
                                           Navigator.pushReplacementNamed(
                                             context,
-                                            AppRoutes.adminDashboard,
+                                            AdminRoutes.adminHome,
                                           );
                                         } else {
                                           Navigator.pushReplacementNamed(

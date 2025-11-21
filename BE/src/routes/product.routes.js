@@ -16,7 +16,7 @@ const router = express.Router();
 router.get("/", getAllProducts);
 router.get("/:id", getProductById);
 
-// Admin
+// Admin only
 router.post("/", verifyToken, requireRole("admin"), createProduct);
 router.put("/:id", verifyToken, requireRole("admin"), updateProduct);
 router.delete("/:id", verifyToken, requireRole("admin"), deleteProduct);

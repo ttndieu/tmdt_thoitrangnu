@@ -1,4 +1,3 @@
-// lib/modules/auth/providers/auth_provider.dart
 import 'package:flutter/material.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../storage/local_storage.dart';
@@ -14,71 +13,85 @@ class AuthProvider with ChangeNotifier {
   String? message;
   UserModel? user;
 
+  // ========== LOGIN ==========
   Future<bool> login(String email, String password) async {
     try {
       status = AuthStatus.loading;
       notifyListeners();
 
       final data = await _repo.login(email, password);
-      // data should contain accessToken and user
-      final token = data['accessToken'] ?? data['token'] ?? data['access_token'];
-      final userJson = data['user'] ?? data;
-      if (token == null) {
+
+      final token = data["token"] ?? data["accessToken"];
+      final userJson = data["user"];
+
+      if (token == null || userJson == null) {
         status = AuthStatus.error;
-        message = 'Token missing in response';
+        message = "Token hoặc User không hợp lệ từ server";
         notifyListeners();
         return false;
       }
 
-      await _storage.saveToken(token);
-      await _storage.saveUser(userJson as Map<String, dynamic>);
+      // Thêm token vào userJson để UserModel khởi tạo được
+      userJson["token"] = token;
 
-      user = UserModel.fromJson(userJson as Map<String, dynamic>);
+      // Lưu storage
+      await _storage.saveToken(token);
+      await _storage.saveUser(userJson);
+
+      // Parse model
+      user = UserModel.fromJson(userJson);
+
       status = AuthStatus.authenticated;
       notifyListeners();
       return true;
+
     } catch (e) {
-      status = AuthStatus.error;
       message = e.toString();
-      notifyListeners();
-      return false;
-    }
-  }
-
-  Future<bool> register(String name, String email, String password) async {
-  try {
-    status = AuthStatus.loading;
-    notifyListeners();
-
-    final data = await _repo.register(name, email, password);
-
-    final token = data['accessToken'] ?? data['token'];
-    final userJson = data['user'];
-
-    if (token == null || userJson == null) {
       status = AuthStatus.error;
-      message = "Dữ liệu trả về không hợp lệ";
       notifyListeners();
       return false;
     }
-
-    await _storage.saveToken(token);
-    await _storage.saveUser(userJson);
-
-    user = UserModel.fromJson(userJson);
-    status = AuthStatus.authenticated;
-    notifyListeners();
-    return true;
-
-  } catch (e) {
-    status = AuthStatus.error;
-    message = e.toString();
-    notifyListeners();
-    return false;
   }
-}
 
+  // ========== REGISTER ==========
+  Future<bool> register(String name, String email, String password) async {
+    try {
+      status = AuthStatus.loading;
+      notifyListeners();
 
+      final data = await _repo.register(name, email, password);
+
+      final token = data["token"] ?? data["accessToken"];
+      final userJson = data["user"];
+
+      if (token == null || userJson == null) {
+        status = AuthStatus.error;
+        message = "Dữ liệu trả về không hợp lệ";
+        notifyListeners();
+        return false;
+      }
+
+      // Thêm token
+      userJson["token"] = token;
+
+      await _storage.saveToken(token);
+      await _storage.saveUser(userJson);
+
+      user = UserModel.fromJson(userJson);
+
+      status = AuthStatus.authenticated;
+      notifyListeners();
+      return true;
+
+    } catch (e) {
+      message = e.toString();
+      status = AuthStatus.error;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // ========== LOGOUT ==========
   Future<void> logout() async {
     await _storage.clearAll();
     user = null;
