@@ -60,7 +60,9 @@ class _ProductFormPageState extends State<ProductFormPage> {
 
       final vars = p["variants"];
       if (vars is List) {
-        _variants = List<Map<String, dynamic>>.from(vars.map((e) => Map<String, dynamic>.from(e)));
+        _variants = List<Map<String, dynamic>>.from(
+          vars.map((e) => Map<String, dynamic>.from(e)),
+        );
       }
     }
   }
@@ -106,7 +108,9 @@ class _ProductFormPageState extends State<ProductFormPage> {
         });
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Upload lỗi: $e")));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Upload lỗi: $e")));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -121,10 +125,13 @@ class _ProductFormPageState extends State<ProductFormPage> {
     }
     setState(() => _loading = true);
     try {
-      await admin.api.dio.delete("/api/upload/$publicId");
+      final encoded = Uri.encodeComponent(publicId);
+      await admin.api.dio.delete("/api/upload/$encoded");
       if (mounted) setState(() => _images.removeAt(index));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Xoá ảnh lỗi: $e")));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Xoá ảnh lỗi: $e")));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -162,17 +169,26 @@ class _ProductFormPageState extends State<ProductFormPage> {
         };
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Replace lỗi: $e")));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Replace lỗi: $e")));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
-  Future<void> _openVariantEditor({Map<String, dynamic>? variant, int? index}) async {
+  Future<void> _openVariantEditor({
+    Map<String, dynamic>? variant,
+    int? index,
+  }) async {
     final sizeCtrl = TextEditingController(text: variant?["size"] ?? "");
     final colorCtrl = TextEditingController(text: variant?["color"] ?? "");
-    final stockCtrl = TextEditingController(text: variant?["stock"]?.toString() ?? "0");
-    final priceCtrl = TextEditingController(text: variant?["price"]?.toString() ?? "0");
+    final stockCtrl = TextEditingController(
+      text: variant?["stock"]?.toString() ?? "0",
+    );
+    final priceCtrl = TextEditingController(
+      text: variant?["price"]?.toString() ?? "0",
+    );
 
     final result = await showDialog<Map<String, dynamic>?>(
       context: context,
@@ -182,15 +198,32 @@ class _ProductFormPageState extends State<ProductFormPage> {
           content: SingleChildScrollView(
             child: Column(
               children: [
-                TextFormField(controller: sizeCtrl, decoration: const InputDecoration(labelText: "Size (S/M/L)")),
-                TextFormField(controller: colorCtrl, decoration: const InputDecoration(labelText: "Color")),
-                TextFormField(controller: stockCtrl, decoration: const InputDecoration(labelText: "Stock"), keyboardType: TextInputType.number),
-                TextFormField(controller: priceCtrl, decoration: const InputDecoration(labelText: "Price"), keyboardType: TextInputType.number),
+                TextFormField(
+                  controller: sizeCtrl,
+                  decoration: const InputDecoration(labelText: "Size (S/M/L)"),
+                ),
+                TextFormField(
+                  controller: colorCtrl,
+                  decoration: const InputDecoration(labelText: "Color"),
+                ),
+                TextFormField(
+                  controller: stockCtrl,
+                  decoration: const InputDecoration(labelText: "Stock"),
+                  keyboardType: TextInputType.number,
+                ),
+                TextFormField(
+                  controller: priceCtrl,
+                  decoration: const InputDecoration(labelText: "Price"),
+                  keyboardType: TextInputType.number,
+                ),
               ],
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Hủy")),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Hủy"),
+            ),
             ElevatedButton(
               onPressed: () {
                 final v = {
@@ -202,7 +235,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
                 Navigator.pop(context, v);
               },
               child: const Text("Lưu"),
-            )
+            ),
           ],
         );
       },
@@ -233,12 +266,17 @@ class _ProductFormPageState extends State<ProductFormPage> {
       if (widget.product == null) {
         await admin.api.post("/api/products", data: payload);
       } else {
-        await admin.api.put("/api/products/${widget.product!['_id']}", data: payload);
+        await admin.api.put(
+          "/api/products/${widget.product!['_id']}",
+          data: payload,
+        );
       }
 
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Lỗi lưu sản phẩm: $e")));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Lỗi lưu sản phẩm: $e")));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -248,7 +286,10 @@ class _ProductFormPageState extends State<ProductFormPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text("Ảnh sản phẩm", style: TextStyle(fontWeight: FontWeight.bold)),
+        const Text(
+          "Ảnh sản phẩm",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
@@ -259,14 +300,25 @@ class _ProductFormPageState extends State<ProductFormPage> {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(6),
-                    child: Image.network(_images[i]["url"] ?? "", width: 100, height: 100, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image)),
+                    child: Image.network(
+                      _images[i]["url"] ?? "",
+                      width: 100,
+                      height: 100,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) =>
+                          const Icon(Icons.broken_image),
+                    ),
                   ),
                   Positioned(
                     right: 0,
                     top: 0,
                     child: GestureDetector(
                       onTap: () => _deleteImage(admin, i),
-                      child: const CircleAvatar(radius: 12, backgroundColor: Colors.red, child: Icon(Icons.close, size: 14, color: Colors.white)),
+                      child: const CircleAvatar(
+                        radius: 12,
+                        backgroundColor: Colors.red,
+                        child: Icon(Icons.close, size: 14, color: Colors.white),
+                      ),
                     ),
                   ),
                   Positioned(
@@ -274,7 +326,15 @@ class _ProductFormPageState extends State<ProductFormPage> {
                     bottom: 0,
                     child: GestureDetector(
                       onTap: () => _replaceImage(admin, i),
-                      child: const CircleAvatar(radius: 12, backgroundColor: Colors.blue, child: Icon(Icons.refresh, size: 14, color: Colors.white)),
+                      child: const CircleAvatar(
+                        radius: 12,
+                        backgroundColor: Colors.blue,
+                        child: Icon(
+                          Icons.refresh,
+                          size: 14,
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -284,12 +344,15 @@ class _ProductFormPageState extends State<ProductFormPage> {
               child: Container(
                 width: 100,
                 height: 100,
-                decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(6)),
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(6),
+                ),
                 child: const Icon(Icons.add_a_photo),
               ),
             ),
           ],
-        )
+        ),
       ],
     );
   }
@@ -300,13 +363,16 @@ class _ProductFormPageState extends State<ProductFormPage> {
       children: [
         Row(
           children: [
-            const Text("Variants", style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              "Variants",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(width: 8),
             ElevatedButton.icon(
               onPressed: () => _openVariantEditor(),
               icon: const Icon(Icons.add),
               label: const Text("Thêm"),
-            )
+            ),
           ],
         ),
         const SizedBox(height: 8),
@@ -315,16 +381,30 @@ class _ProductFormPageState extends State<ProductFormPage> {
             for (int i = 0; i < _variants.length; i++)
               Card(
                 child: ListTile(
-                  title: Text("${_variants[i]['size']} - ${_variants[i]['color']}"),
-                  subtitle: Text("Stock: ${_variants[i]['stock']}, Price: ${_variants[i]['price']}"),
-                  trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                    IconButton(icon: const Icon(Icons.edit), onPressed: () => _openVariantEditor(variant: _variants[i], index: i)),
-                    IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => setState(() => _variants.removeAt(i))),
-                  ]),
+                  title: Text(
+                    "${_variants[i]['size']} - ${_variants[i]['color']}",
+                  ),
+                  subtitle: Text(
+                    "Stock: ${_variants[i]['stock']}, Price: ${_variants[i]['price']}",
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.edit),
+                        onPressed: () =>
+                            _openVariantEditor(variant: _variants[i], index: i),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () => setState(() => _variants.removeAt(i)),
+                      ),
+                    ],
+                  ),
                 ),
-              )
+              ),
           ],
-        )
+        ),
       ],
     );
   }
@@ -334,21 +414,28 @@ class _ProductFormPageState extends State<ProductFormPage> {
     final admin = Provider.of<AdminProvider>(context, listen: false);
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.product == null ? "Tạo sản phẩm" : "Sửa sản phẩm")),
+      appBar: AppBar(
+        title: Text(widget.product == null ? "Tạo sản phẩm" : "Sửa sản phẩm"),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: FutureBuilder(
           future: admin.api.get("/api/category"),
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-            if (snapshot.hasError) return Center(child: Text("Lỗi tải danh mục: ${snapshot.error}"));
+            if (snapshot.connectionState == ConnectionState.waiting)
+              return const Center(child: CircularProgressIndicator());
+            if (snapshot.hasError)
+              return Center(child: Text("Lỗi tải danh mục: ${snapshot.error}"));
 
             // backend có thể trả { categories: [...] } hoặc { success: true, data: [...] }
             List categories = [];
             final data = snapshot.data?.data;
-            if (data is Map && data.containsKey("categories")) categories = data["categories"];
-            else if (data is Map && data.containsKey("data")) categories = data["data"];
-            else if (data is List) categories = data;
+            if (data is Map && data.containsKey("categories"))
+              categories = data["categories"];
+            else if (data is Map && data.containsKey("data"))
+              categories = data["data"];
+            else if (data is List)
+              categories = data;
 
             return Form(
               key: _formKey,
@@ -356,8 +443,12 @@ class _ProductFormPageState extends State<ProductFormPage> {
                 children: [
                   TextFormField(
                     controller: _name,
-                    decoration: const InputDecoration(labelText: "Tên sản phẩm"),
-                    validator: (v) => v == null || v.trim().isEmpty ? "Không được để trống" : null,
+                    decoration: const InputDecoration(
+                      labelText: "Tên sản phẩm",
+                    ),
+                    validator: (v) => v == null || v.trim().isEmpty
+                        ? "Không được để trống"
+                        : null,
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
@@ -371,14 +462,21 @@ class _ProductFormPageState extends State<ProductFormPage> {
                     decoration: const InputDecoration(labelText: "Danh mục"),
                     items: categories.map<DropdownMenuItem<String>>((cat) {
                       if (cat is Map) {
-                        return DropdownMenuItem(value: cat["slug"], child: Text(cat["name"] ?? ""));
+                        return DropdownMenuItem(
+                          value: cat["slug"],
+                          child: Text(cat["name"] ?? ""),
+                        );
                       } else if (cat is String) {
                         return DropdownMenuItem(value: cat, child: Text(cat));
                       }
-                      return const DropdownMenuItem(value: "", child: Text("Unknown"));
+                      return const DropdownMenuItem(
+                        value: "",
+                        child: Text("Unknown"),
+                      );
                     }).toList(),
                     onChanged: (v) => setState(() => _selectedCategorySlug = v),
-                    validator: (v) => v == null || v.isEmpty ? "Chọn danh mục" : null,
+                    validator: (v) =>
+                        v == null || v.isEmpty ? "Chọn danh mục" : null,
                   ),
                   const SizedBox(height: 16),
                   _buildImagesSection(admin),
@@ -387,8 +485,17 @@ class _ProductFormPageState extends State<ProductFormPage> {
                   const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: _loading ? null : () => _submit(admin),
-                    child: _loading ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : Text(widget.product == null ? "Tạo" : "Cập nhật"),
-                  )
+                    child: _loading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Text(widget.product == null ? "Tạo" : "Cập nhật"),
+                  ),
                 ],
               ),
             );
