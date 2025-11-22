@@ -15,7 +15,7 @@ import errorHandler from "./middlewares/error.middleware.js";
 import adminRoutes from "./routes/admin.routes.js";
 import wishlistRoutes from "./routes/wishlist.routes.js";
 import voucherRoutes from "./routes/voucher.routes.js";
-
+import notificationRoutes from "./routes/notification.routes.js";
 
 
 const app = express();
@@ -42,7 +42,7 @@ app.use("/api/reviews", reviewRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/voucher", voucherRoutes);
-
+app.use("/api/notifications", notificationRoutes);
 
 
 export default app;

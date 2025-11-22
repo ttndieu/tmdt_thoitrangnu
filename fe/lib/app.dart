@@ -1,3 +1,7 @@
+import 'package:fe/modules/user/models/mall_provider.dart';
+import 'package:fe/modules/user/providers/home_provider.dart';
+import 'package:fe/modules/user/providers/notification_provider.dart';
+import 'package:fe/modules/user/user_main_page.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -7,8 +11,6 @@ import 'modules/auth/providers/auth_provider.dart';
 
 import 'modules/auth/views/login_page.dart';
 import 'modules/auth/views/register_page.dart';
-
-import 'modules/user/user_home_page.dart';
 
 import 'modules/admin/admin_home_page.dart';
 import 'modules/admin/admin_provider.dart';
@@ -23,8 +25,10 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        /// Bắt buộc phải có!!!
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => HomeProvider()),
+        ChangeNotifierProvider(create: (_) => MallProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
 
         /// AdminProvider phụ thuộc AuthProvider
         ChangeNotifierProxyProvider<AuthProvider, AdminProvider>(
@@ -41,7 +45,7 @@ class MyApp extends StatelessWidget {
         routes: {
           AppRoutes.login: (_) => const LoginPage(),
           AppRoutes.register: (_) => const RegisterPage(),
-          AppRoutes.userHome: (_) => const UserHomePage(),
+          AppRoutes.userHome: (_) => const UserMainPage(),
           AdminRoutes.adminHome: (_) => const AdminHomePage(),
         },
       ),

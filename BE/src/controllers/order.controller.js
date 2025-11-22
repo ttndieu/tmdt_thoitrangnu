@@ -2,8 +2,7 @@ import Order from "../models/Order.js";
 import Cart from "../models/Cart.js";
 import Product from "../models/Product.js";
 import { sendOrderEmail } from "../services/mail.service.js";
-
-
+import { notifyNewOrder, notifyOrderStatusChange } from "../services/notification.service.js";
 
 // POST /api/orders
 export const createOrder = async (req, res) => {
@@ -62,6 +61,8 @@ export const createOrder = async (req, res) => {
       status: "pending",
     });
 
+    // Gửi notification cho user
+    await notifyNewOrder(req.user._id, order._id, total);
     // Gửi email cho user
 await sendOrderEmail(req.user.email, order);
 
@@ -107,6 +108,7 @@ export const getAllOrders = async (req, res) => {
 
 
 // PUT /api/orders/:id/status (admin updates status)
+// PUT /api/orders/:id/status
 export const updateOrderStatus = async (req, res) => {
   try {
     const { status } = req.body;
@@ -116,13 +118,21 @@ export const updateOrderStatus = async (req, res) => {
     if (!allowed.includes(status))
       return res.status(400).json({ message: "Invalid status" });
 
-    const updated = await Order.findByIdAndUpdate(
+    const order = await Order.findByIdAndUpdate(
       req.params.id,
       { status },
       { new: true }
-    );
+    ).populate("user", "email");
 
-    return res.json({ order: updated });
+    if (!order)
+      return res.status(404).json({ message: "Order not found" });
+
+    // Gửi notification khi trạng thái thay đổi
+    if (["confirmed", "shipping", "completed", "cancelled"].includes(status)) {
+      await notifyOrderStatusChange(order.user._id, order._id, status);
+    }
+
+    return res.json({ order });
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }
