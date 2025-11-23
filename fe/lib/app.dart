@@ -5,6 +5,7 @@ import 'package:fe/modules/user/providers/home_provider.dart';
 import 'package:fe/modules/user/providers/notification_provider.dart';
 import 'package:fe/modules/user/providers/order_provider.dart';
 import 'package:fe/modules/user/providers/wishlist_provider.dart';
+import 'package:fe/modules/user/providers/voucher_provider.dart';
 import 'package:fe/modules/user/screens/cart_page.dart';
 import 'package:fe/modules/user/user_main_page.dart';
 import 'package:flutter/material.dart';
@@ -37,6 +38,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => WishlistProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
         ChangeNotifierProvider(create: (_) => OrderProvider()),
+        ChangeNotifierProvider(create: (_) => VoucherProvider()),
         ChangeNotifierProxyProvider<AuthProvider, AddressProvider>(
           create: (context) => AddressProvider(
             Provider.of<AuthProvider>(context, listen: false),

@@ -3,8 +3,7 @@
 enum NotificationType {
   order,
   promotion,
-  product,
-  system,
+  system, // Xóa product
 }
 
 class NotificationModel {
@@ -43,9 +42,8 @@ class NotificationModel {
       case 'order':
         return NotificationType.order;
       case 'promotion':
+      case 'voucher': // ✅ Backend dùng 'voucher'
         return NotificationType.promotion;
-      case 'product':
-        return NotificationType.product;
       case 'system':
         return NotificationType.system;
       default:

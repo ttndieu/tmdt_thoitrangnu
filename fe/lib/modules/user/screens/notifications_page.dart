@@ -6,6 +6,7 @@ import '../constants/app_color.dart';
 import '../constants/app_text_styles.dart';
 import '../providers/notification_provider.dart';
 import '../models/notification_model.dart';
+import 'vouchers_page.dart'; // ✅ IMPORT VouchersPage
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({Key? key}) : super(key: key);
@@ -22,7 +23,8 @@ class _NotificationsPageState extends State<NotificationsPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    // ✅ SỬA: 4 → 3 tabs
+    _tabController = TabController(length: 3, vsync: this);
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
@@ -31,6 +33,7 @@ class _NotificationsPageState extends State<NotificationsPage>
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
         final provider = context.read<NotificationProvider>();
+        // ✅ SỬA: Switch case từ 4 → 3
         switch (_tabController.index) {
           case 0:
             provider.setFilter('all');
@@ -41,9 +44,7 @@ class _NotificationsPageState extends State<NotificationsPage>
           case 2:
             provider.setFilter('promotion');
             break;
-          case 3:
-            provider.setFilter('product');
-            break;
+          // ✅ XÓA: case 3 product
         }
       }
     });
@@ -96,75 +97,85 @@ class _NotificationsPageState extends State<NotificationsPage>
   }
 
   Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Consumer<NotificationProvider>(
-        builder: (context, provider, _) {
-          return Row(
-            children: [
-              // ✅ THÊM: Back button
-              if (Navigator.canPop(context))
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.arrow_back),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-              if (Navigator.canPop(context)) const SizedBox(width: 12),
-              
-              const Text('Thông báo', style: AppTextStyles.h1),
-              const SizedBox(width: 8),
-              if (provider.unreadCount > 0)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.error,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${provider.unreadCount}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              const Spacer(),
-              if (provider.notifications.isNotEmpty)
-                TextButton(
-                  onPressed: () async {
-                    await provider.markAllAsRead();
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('✅ Đã đánh dấu tất cả là đã đọc'),
-                          duration: Duration(seconds: 2),
-                        ),
-                      );
-                    }
-                  },
-                  child: const Text(
-                    'Đọc tất cả',
-                    style: TextStyle(color: AppColors.primary),
-                  ),
-                ),
+  return Container(
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: AppColors.surface,
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.05),
+          blurRadius: 4,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    ),
+    child: Consumer<NotificationProvider>(
+      builder: (context, provider, _) {
+        // ✅ DEBUG: In ra unreadCount để kiểm tra
+        print('🔔 Unread count: ${provider.unreadCount}');
+        
+        return Row(
+          children: [
+            // Back button (nếu có)
+            if (Navigator.canPop(context)) ...[
+              IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.arrow_back),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+              const SizedBox(width: 12),
             ],
-          );
-        },
-      ),
-    );
-  }
+            
+            // Title
+            const Text('Thông báo', style: AppTextStyles.h1),
+            const SizedBox(width: 8),
+            
+            // BADGE UNREAD COUNT 
+            if (provider.unreadCount > 0)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.error,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${provider.unreadCount}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            
+            const Spacer(),
+            
+            // "Đọc tất cả" button
+            if (provider.notifications.isNotEmpty)
+              TextButton(
+                onPressed: () async {
+                  await provider.markAllAsRead();
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('✅ Đã đánh dấu tất cả là đã đọc'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                },
+                child: const Text(
+                  'Đọc tất cả',
+                  style: TextStyle(color: AppColors.primary),
+                ),
+              ),
+          ],
+        );
+      },
+    ),
+  );
+}
 
   Widget _buildTabBar() {
     return Container(
@@ -173,11 +184,11 @@ class _NotificationsPageState extends State<NotificationsPage>
         builder: (context, provider, _) {
           return TabBar(
             controller: _tabController,
-            isScrollable: true,
-            tabAlignment: TabAlignment.start,
+            isScrollable: false,
             labelColor: AppColors.primary,
             unselectedLabelColor: AppColors.textSecondary,
             indicatorColor: AppColors.primary,
+            indicatorSize: TabBarIndicatorSize.tab,
             indicatorWeight: 3,
             labelStyle: const TextStyle(
               fontSize: 15,
@@ -187,14 +198,37 @@ class _NotificationsPageState extends State<NotificationsPage>
               fontSize: 15,
               fontWeight: FontWeight.normal,
             ),
+            // ✅ SỬA: Chỉ còn 3 tabs
             tabs: [
-              Tab(text: 'Tất cả (${provider.getCountByType('all')})'),
-              Tab(text: 'Đơn hàng (${provider.getCountByType('order')})'),
-              Tab(text: 'Khuyến mãi (${provider.getCountByType('promotion')})'),
-              Tab(text: 'Sản phẩm (${provider.getCountByType('product')})'),
+              _buildTab('Tất cả', provider.hasUnreadByType('all')),
+              _buildTab('Đơn hàng', provider.hasUnreadByType('order')),
+              _buildTab('Khuyến mãi', provider.hasUnreadByType('promotion')),
+              // ✅ XÓA: Sản phẩm tab
             ],
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildTab(String label, bool hasUnread) {
+    return Tab(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label),
+          if (hasUnread) ...[
+            const SizedBox(width: 6),
+            Container(
+              width: 8,
+              height: 8,
+              decoration: const BoxDecoration(
+                color: AppColors.error,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -235,48 +269,38 @@ class _NotificationsPageState extends State<NotificationsPage>
 
   // ✅ SỬA: Handle notification tap
   void _handleNotificationTap(NotificationModel notification) {
-    print('📱 Notification tapped: ${notification.title}');
-    print('📦 Type: ${notification.type}');
-    print('📄 Data: ${notification.data}');
-    
-    // TODO: Navigate based on notification type
-    // Example:
-    /*
     switch (notification.type) {
       case NotificationType.order:
         final orderId = notification.data?['orderId'];
         if (orderId != null) {
-          Navigator.pushNamed(context, '/order-detail', arguments: orderId);
-        }
-        break;
-        
-      case NotificationType.product:
-        final productId = notification.data?['productId'];
-        if (productId != null) {
-          // Fetch product then navigate
-          // Navigator.push(context, MaterialPageRoute(
-          //   builder: (_) => ProductDetailPage(product: product)
-          // ));
+          // TODO: Navigate to order detail
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('📦 Xem chi tiết đơn hàng #$orderId'),
+              duration: const Duration(seconds: 2),
+            ),
+          );
         }
         break;
         
       case NotificationType.promotion:
-        // Navigate to promotion detail
+        // ✅ THÊM: Navigate to VouchersPage
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const VouchersPage()),
+        );
         break;
         
       case NotificationType.system:
-        // Show dialog or navigate to settings
+        // Show dialog or just display message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('ℹ️ ${notification.message}'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
         break;
     }
-    */
-    
-    // Temporary: Show snackbar
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('📌 ${notification.title}'),
-        duration: const Duration(seconds: 2),
-      ),
-    );
   }
 
   Widget _buildEmptyState() {
@@ -473,8 +497,6 @@ class _NotificationItem extends StatelessWidget {
         return Icons.shopping_bag_outlined;
       case NotificationType.promotion:
         return Icons.local_offer_outlined;
-      case NotificationType.product:
-        return Icons.new_releases_outlined;
       case NotificationType.system:
         return Icons.settings_outlined;
     }
@@ -486,8 +508,6 @@ class _NotificationItem extends StatelessWidget {
         return AppColors.primary;
       case NotificationType.promotion:
         return Colors.orange;
-      case NotificationType.product:
-        return Colors.green;
       case NotificationType.system:
         return Colors.blue;
     }

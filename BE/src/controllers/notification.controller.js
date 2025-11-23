@@ -11,9 +11,7 @@ export const getNotifications = async (req, res) => {
     const userId = req.user._id;
     const { limit = 50 } = req.query;
 
-    // Lấy thông báo:
-    // - Riêng của user
-    // - Broadcast chung cho tất cả
+    // Lấy thông báo
     const notifications = await Notification.find({
       $or: [
         { audience: "user", user: userId },
@@ -22,6 +20,20 @@ export const getNotifications = async (req, res) => {
     })
       .sort({ createdAt: -1 })
       .limit(parseInt(limit));
+
+    // FIX: Compute isRead cho mỗi notification
+    const notificationsWithReadStatus = notifications.map(noti => {
+      const obj = noti.toObject();
+      
+      // Nếu là broadcast → check userId trong isReadBy
+      if (obj.audience === "all") {
+        obj.isRead = obj.isReadBy?.includes(userId.toString()) || false;
+      }
+      // Nếu là personal → dùng isRead có sẵn
+      // (không cần làm gì, đã có isRead field)
+      
+      return obj;
+    });
 
     // Tính số chưa đọc
     const unreadPersonal = await Notification.countDocuments({
@@ -37,7 +49,7 @@ export const getNotifications = async (req, res) => {
 
     return res.json({
       success: true,
-      notifications,
+      notifications: notificationsWithReadStatus, // Trả về computed
       unreadCount: unreadPersonal + unreadBroadcast,
     });
 
