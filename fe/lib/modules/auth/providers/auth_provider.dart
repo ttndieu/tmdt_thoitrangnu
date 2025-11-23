@@ -199,7 +199,7 @@ class AuthProvider with ChangeNotifier {
       print('\n🔐 ========== CHANGE PASSWORD (FLUTTER) ==========');
 
       final response = await _apiClient.put(
-        '${ApiConfig.BASE_URL}/user/change-password',
+        ApiConfig.USER_CHANGE_PASSWORD,
         data: {
           'oldPassword': oldPassword,
           'newPassword': newPassword,

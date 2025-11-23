@@ -6,6 +6,7 @@ import '../../constants/app_text_styles.dart';
 
 class HomeAppBar extends StatelessWidget {
   final String userName;
+  final String? avatarUrl; // ✅ THÊM
   final int cartCount;
   final int notificationCount;
   final VoidCallback onCartTap;
@@ -14,6 +15,7 @@ class HomeAppBar extends StatelessWidget {
   const HomeAppBar({
     Key? key,
     required this.userName,
+    this.avatarUrl, // ✅ THÊM
     this.cartCount = 0,
     this.notificationCount = 0,
     required this.onCartTap,
@@ -40,7 +42,7 @@ class HomeAppBar extends StatelessWidget {
           Expanded(
             child: Row(
               children: [
-                // Avatar
+                // ✅ Avatar with Image
                 Container(
                   width: 44,
                   height: 44,
@@ -55,10 +57,8 @@ class HomeAppBar extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: const Icon(
-                    Icons.person,
-                    color: Colors.white,
-                    size: 24,
+                  child: ClipOval(
+                    child: _buildAvatar(), // ✅ SỬA
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -89,7 +89,7 @@ class HomeAppBar extends StatelessWidget {
             ),
           ),
 
-          // ✅ Cart Button (GIỎ HÀNG)
+          // Cart Button
           _IconButton(
             icon: Icons.shopping_cart_outlined,
             badge: cartCount,
@@ -98,19 +98,58 @@ class HomeAppBar extends StatelessWidget {
           ),
           const SizedBox(width: 8),
 
-          // ✅ Notification Button (THÔNG BÁO) - ĐÃ SỬA
+          // Notification Button
           _IconButton(
             icon: Icons.notifications_outlined,
-            badge: notificationCount,  // ← SỬA: dùng notificationCount
-            onTap: onNotificationTap,  // ← SỬA: dùng onNotificationTap
+            badge: notificationCount,
+            onTap: onNotificationTap,
             tooltip: 'Thông báo',
           ),
         ],
       ),
     );
   }
+
+  // ✅ THÊM FUNCTION HIỂN THỊ AVATAR
+  Widget _buildAvatar() {
+    if (avatarUrl != null && avatarUrl!.isNotEmpty) {
+      return Image.network(
+        avatarUrl!,
+        fit: BoxFit.cover,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Center(
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+                value: loadingProgress.expectedTotalBytes != null
+                    ? loadingProgress.cumulativeBytesLoaded /
+                        loadingProgress.expectedTotalBytes!
+                    : null,
+              ),
+            ),
+          );
+        },
+        errorBuilder: (_, __, ___) => const Icon(
+          Icons.person,
+          color: Colors.white,
+          size: 24,
+        ),
+      );
+    }
+
+    return const Icon(
+      Icons.person,
+      color: Colors.white,
+      size: 24,
+    );
+  }
 }
 
+// ✅ GIỮ NGUYÊN _IconButton CLASS
 class _IconButton extends StatefulWidget {
   final IconData icon;
   final int badge;
@@ -179,7 +218,6 @@ class _IconButtonState extends State<_IconButton>
             ),
             child: Stack(
               children: [
-                // Icon
                 Center(
                   child: Icon(
                     widget.icon,
@@ -190,7 +228,6 @@ class _IconButtonState extends State<_IconButton>
                   ),
                 ),
                 
-                // Badge
                 if (widget.badge > 0)
                   Positioned(
                     top: 6,

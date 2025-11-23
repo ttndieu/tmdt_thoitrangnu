@@ -57,6 +57,7 @@ class _HomePageState extends State<HomePage>
 
     final authProvider = context.watch<AuthProvider>();
     final userName = authProvider.user?.name ?? 'Khách';
+    final avatarUrl = authProvider.user?.avatar;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -77,6 +78,7 @@ class _HomePageState extends State<HomePage>
                       builder: (context, cartProvider, _) {
                         return HomeAppBar(
                           userName: userName,
+                          avatarUrl: avatarUrl,
                           cartCount: cartProvider.itemCount,
                           notificationCount: 0,
                           onCartTap: () {

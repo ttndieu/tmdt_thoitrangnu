@@ -6,7 +6,7 @@ class ApiConfig {
   // Auth
   static const String AUTH_LOGIN = "/api/auth/login";
   static const String AUTH_REGISTER = "/api/auth/register";
-  static const String USER_CHANGE_PASSWORD = "$BASE_URL/user/change-password";
+  static const String USER_CHANGE_PASSWORD = "/api/user/change-password";
 
   // Categories
   static const String CATEGORIES = "/api/category";
@@ -35,7 +35,7 @@ class ApiConfig {
   
   // Upload
   static const String UPLOAD = "/api/upload";
-  static const String UPLOAD_AVATAR = "$BASE_URL/api/upload/avatar";
+  static const String UPLOAD_AVATAR = "/api/upload/avatar";
 
   // Notification endpoints
   static const String NOTIFICATIONS = '/api/notifications';
