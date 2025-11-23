@@ -23,7 +23,7 @@ class AddressModel {
 
   factory AddressModel.fromJson(Map<String, dynamic> json) {
     return AddressModel(
-      id: json['_id'],
+      id: json['_id']?.toString(),
       fullName: json['fullName'] ?? '',
       phone: json['phone'] ?? '',
       addressLine: json['addressLine'] ?? '',
@@ -49,5 +49,27 @@ class AddressModel {
 
   String get fullAddress {
     return '$addressLine, $ward, $district, $city';
+  }
+
+  AddressModel copyWith({
+    String? id,
+    String? fullName,
+    String? phone,
+    String? addressLine,
+    String? ward,
+    String? district,
+    String? city,
+    bool? isDefault,
+  }) {
+    return AddressModel(
+      id: id ?? this.id,
+      fullName: fullName ?? this.fullName,
+      phone: phone ?? this.phone,
+      addressLine: addressLine ?? this.addressLine,
+      ward: ward ?? this.ward,
+      district: district ?? this.district,
+      city: city ?? this.city,
+      isDefault: isDefault ?? this.isDefault,
+    );
   }
 }

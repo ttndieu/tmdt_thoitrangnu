@@ -18,6 +18,11 @@ class AppColors {
   static const Color textSecondary = Color(0xFF757575);
   static const Color textHint = Color(0xFFBDBDBD);
 
+  // ✅ THÊM: Border & Divider
+  static const Color border = Color(0xFFEEEEEE);        // Border mặc định - tone xám nhạt
+  static const Color borderLight = Color(0xFFF5F5F5);   // Border rất nhạt
+  static const Color divider = Color(0xFFE0E0E0);       // Divider line
+
   // Accent
   static const Color accent = Color(0xFFC9A690); // Rose gold
   static const Color accentLight = Color(0xFFE5D4C1);

@@ -1,6 +1,11 @@
 import 'package:fe/modules/user/models/mall_provider.dart';
+import 'package:fe/modules/user/providers/address_provider.dart';
+import 'package:fe/modules/user/providers/cart_provider.dart';
 import 'package:fe/modules/user/providers/home_provider.dart';
 import 'package:fe/modules/user/providers/notification_provider.dart';
+import 'package:fe/modules/user/providers/order_provider.dart';
+import 'package:fe/modules/user/providers/wishlist_provider.dart';
+import 'package:fe/modules/user/screens/cart_page.dart';
 import 'package:fe/modules/user/user_main_page.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -29,6 +34,15 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => HomeProvider()),
         ChangeNotifierProvider(create: (_) => MallProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
+        ChangeNotifierProvider(create: (_) => WishlistProvider()),
+        ChangeNotifierProvider(create: (_) => CartProvider()),
+        ChangeNotifierProvider(create: (_) => OrderProvider()),
+        ChangeNotifierProxyProvider<AuthProvider, AddressProvider>(
+          create: (context) => AddressProvider(
+            Provider.of<AuthProvider>(context, listen: false),
+          ),
+          update: (context, auth, previous) => AddressProvider(auth),
+        ),
 
         /// AdminProvider phụ thuộc AuthProvider
         ChangeNotifierProxyProvider<AuthProvider, AdminProvider>(
@@ -47,6 +61,7 @@ class MyApp extends StatelessWidget {
           AppRoutes.register: (_) => const RegisterPage(),
           AppRoutes.userHome: (_) => const UserMainPage(),
           AdminRoutes.adminHome: (_) => const AdminHomePage(),
+          '/cart': (_) => const CartPage(),
         },
       ),
     );

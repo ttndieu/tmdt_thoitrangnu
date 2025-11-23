@@ -1,18 +1,20 @@
 // lib/modules/user/screens/home_page.dart
 
-import 'package:fe/modules/user/constants/app_color.dart';
-import 'package:fe/modules/user/widgets/home/category_chips.dart';
+import 'package:fe/modules/user/screens/product_detail_page.dart.dart';
 import 'package:fe/modules/user/widgets/home/product_grid.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../providers/home_provider.dart';
-import '../../auth/providers/auth_provider.dart';
+import '../constants/app_color.dart';
 import '../constants/app_text_styles.dart';
-
+import '../providers/home_provider.dart';
+import '../providers/wishlist_provider.dart';
+import '../providers/cart_provider.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../widgets/home/home_app_bar.dart';
 import '../widgets/home/featured_product_card.dart';
-
+import '../widgets/home/category_chips.dart';
+import 'cart_page.dart'; 
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -33,6 +35,8 @@ class _HomePageState extends State<HomePage>
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
+      context.read<WishlistProvider>().fetchWishlist();
+      context.read<CartProvider>().fetchCart(); // ✅ THÊM
     });
   }
 
@@ -52,7 +56,7 @@ class _HomePageState extends State<HomePage>
     super.build(context);
 
     final authProvider = context.watch<AuthProvider>();
-    final userName = authProvider.user?.name ?? 'Khách'; 
+    final userName = authProvider.user?.name ?? 'Khách';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -60,18 +64,38 @@ class _HomePageState extends State<HomePage>
         child: Consumer<HomeProvider>(
           builder: (context, provider, _) {
             return RefreshIndicator(
-              onRefresh: _loadData,
+              onRefresh: () async {
+                await _loadData();
+                await context.read<CartProvider>().fetchCart(); // ✅ THÊM
+              },
               color: AppColors.primary,
               child: CustomScrollView(
                 slivers: [
-                  // Custom App Bar
+                  // ✅ SỬA: Custom App Bar với CartProvider
                   SliverToBoxAdapter(
-                    child: HomeAppBar(
-                      userName: userName,
-                      cartCount: 0,
-                      notificationCount: 0,
-                      onCartTap: () {},
-                      onNotificationTap: () {},
+                    child: Consumer<CartProvider>(
+                      builder: (context, cartProvider, _) {
+                        return HomeAppBar(
+                          userName: userName,
+                          cartCount: cartProvider.itemCount,
+                          notificationCount: 0,
+                          onCartTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const CartPage(),
+                              ),
+                            );
+                          },
+                          onNotificationTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('🔔 Tính năng thông báo đang phát triển'),
+                              ),
+                            );
+                          },
+                        );
+                      },
                     ),
                   ),
 
@@ -224,7 +248,13 @@ class _HomePageState extends State<HomePage>
                 return FeaturedProductCard(
                   product: product,
                   onTap: () {
-                    print('Featured: ${product.name}');
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            ProductDetailPage(product: product),
+                      ),
+                    );
                   },
                 );
               },
@@ -299,12 +329,13 @@ class _HomePageState extends State<HomePage>
             return ProductCard(
               product: product,
               onTap: () {
-                print('Product: ${product.name}');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ProductDetailPage(product: product),
+                  ),
+                );
               },
-              onWishlistTap: () {
-                print('Wishlist: ${product.name}');
-              },
-              isWishlisted: false,
             );
           },
           childCount: provider.products.length,
