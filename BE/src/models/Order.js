@@ -20,7 +20,16 @@ const orderSchema = mongoose.Schema(
 
     items: [orderItemSchema],
 
-    totalAmount: Number,
+    // VOUCHER FIELDS
+    voucher: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Voucher",
+      default: null,
+    },
+    voucherCode: { type: String, default: null },
+    discount: { type: Number, default: 0 },
+    originalAmount: Number,  // Tổng trước giảm giá
+    totalAmount: Number,     // Tổng sau giảm giá
 
     paymentMethod: {
       type: String,

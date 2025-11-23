@@ -8,21 +8,27 @@ import {
   notifyNewOrder,
   notifyOrderStatusChange
 } from "../services/notification.service.js";
+import Voucher from "../models/Voucher.js";
 
 // ------------------------------------------------------
 // CREATE ORDER (USER)
 // ------------------------------------------------------
 export const createOrder = async (req, res) => {
   try {
-    const { paymentMethod, shippingAddress } = req.body;
+    const { paymentMethod, shippingAddress, voucherId } = req.body;  // ✅ ADD voucherId
+
+    console.log(`\n📦 ========== CREATE ORDER ==========`);
+    console.log(`👤 User: ${req.user._id}`);
+    console.log(`🎫 Voucher ID: ${voucherId || 'None'}`);
 
     const cart = await Cart.findOne({ user: req.user._id })
       .populate("items.product");
 
-    if (!cart || cart.items.length === 0)
+    if (!cart || cart.items.length === 0) {
       return res.status(400).json({ message: "Cart is empty" });
+    }
 
-    let total = 0;
+    let originalAmount = 0;
 
     // Check tồn kho & tính tổng
     for (let item of cart.items) {
@@ -32,13 +38,64 @@ export const createOrder = async (req, res) => {
         (v) => v.size === item.size && v.color === item.color
       );
 
-      if (!variant || variant.stock < item.quantity)
+      if (!variant || variant.stock < item.quantity) {
         return res.status(400).json({
           message: `Not enough stock for ${product.name}`
         });
+      }
 
-      total += variant.price * item.quantity;
+      originalAmount += variant.price * item.quantity;
     }
+
+    console.log(`💰 Original amount: ${originalAmount}`);
+
+    // ✅ APPLY VOUCHER
+    let discount = 0;
+    let voucher = null;
+    let voucherCode = null;
+
+    if (voucherId) {
+      voucher = await Voucher.findById(voucherId);
+
+      if (!voucher) {
+        return res.status(404).json({ message: "Voucher not found" });
+      }
+
+      // Validate
+      if (!voucher.active) {
+        return res.status(400).json({ message: "Voucher không khả dụng" });
+      }
+
+      if (voucher.quantity <= 0) {
+        return res.status(400).json({ message: "Voucher đã hết lượt sử dụng" });
+      }
+
+      if (new Date() > voucher.expiredAt) {
+        return res.status(400).json({ message: "Voucher đã hết hạn" });
+      }
+
+      if (originalAmount < voucher.minOrderValue) {
+        return res.status(400).json({ 
+          message: `Đơn hàng tối thiểu ${voucher.minOrderValue.toLocaleString('vi-VN')}đ` 
+        });
+      }
+
+      // Calculate discount
+      discount = Math.min(
+        (originalAmount * voucher.discountPercent) / 100,
+        voucher.maxDiscount
+      );
+
+      voucherCode = voucher.code;
+      console.log(`🎫 Applied: ${voucherCode} → Discount: ${discount}`);
+
+      // Giảm số lượng voucher
+      voucher.quantity -= 1;
+      await voucher.save();
+    }
+
+    const totalAmount = originalAmount - discount;
+    console.log(`💵 Total amount: ${totalAmount}`);
 
     // Trừ tồn kho
     for (let item of cart.items) {
@@ -52,7 +109,7 @@ export const createOrder = async (req, res) => {
       );
     }
 
-    // Tạo đơn hàng
+    // ✅ Tạo đơn hàng
     const order = await Order.create({
       user: req.user._id,
       items: cart.items.map((i) => ({
@@ -64,29 +121,36 @@ export const createOrder = async (req, res) => {
           (v) => v.size === i.size && v.color === i.color
         ).price,
       })),
-      totalAmount: total,
+      voucher: voucherId || null,
+      voucherCode: voucherCode || null,
+      discount: discount,
+      originalAmount: originalAmount,
+      totalAmount: totalAmount,
       paymentMethod,
       shippingAddress,
       status: "pending"
     });
 
-    // Load lại order để lấy thông tin product.name
+    // Load order với product info
     const fullOrder = await Order.findById(order._id)
-      .populate("items.product", "name");
+      .populate("items.product", "name")
+      .populate("voucher");
 
-    // Thông báo (user + admin)
+    console.log(`✅ Order created: ${order._id}`);
+    console.log(`📦 ========== CREATE ORDER END ==========\n`);
+
+    // Notifications & Email
     await notifyNewOrder(req.user._id, fullOrder);
-
-    // Email
     await sendOrderEmail(req.user.email, fullOrder);
 
-    // Xoá giỏ hàng
+    // Clear cart
     cart.items = [];
     await cart.save();
 
     return res.status(201).json({ order: fullOrder });
 
   } catch (err) {
+    console.error('❌ Create order error:', err);
     return res.status(500).json({ message: err.message });
   }
 };

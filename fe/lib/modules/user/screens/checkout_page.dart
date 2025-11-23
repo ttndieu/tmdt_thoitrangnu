@@ -8,8 +8,10 @@ import '../constants/app_color.dart';
 import '../constants/app_text_styles.dart';
 import '../providers/cart_provider.dart';
 import '../providers/order_provider.dart';
-import '../providers/address_provider.dart';
+import '../providers/voucher_provider.dart'; 
+import '../models/voucher_model.dart'; 
 import '../widgets/select_address_sheet.dart';
+import '../widgets/voucher_select_sheet.dart'; 
 import '../screens/add_address_page.dart';
 import 'order_success_page.dart';
 
@@ -24,23 +26,50 @@ class _CheckoutPageState extends State<CheckoutPage> {
   String _paymentMethod = 'cod';
   bool _isProcessing = false;
   AddressModel? _selectedAddress;
+  VoucherModel? _selectedVoucher;  // ✅ ADD
+  double _discount = 0;  // ✅ ADD
 
   @override
   void initState() {
     super.initState();
-    // ✅ Tự động chọn địa chỉ mặc định
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Tự động chọn địa chỉ mặc định
       final user = context.read<AuthProvider>().user;
       if (user?.defaultAddress != null) {
         setState(() {
           _selectedAddress = user!.defaultAddress;
         });
       }
+
+      // ✅ Load vouchers
+      context.read<VoucherProvider>().fetchVouchers();
     });
   }
 
   double _calculateTotal(CartProvider cartProvider) {
     return cartProvider.items.fold(0.0, (sum, item) => sum + item.subtotal);
+  }
+
+  // ✅ SHOW VOUCHER SHEET
+  void _showVoucherSheet() async {
+    final cartTotal = context.read<CartProvider>().totalAmount;
+    
+    final result = await showModalBottomSheet<VoucherModel>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => VoucherSelectSheet(
+        totalAmount: cartTotal,
+        selectedVoucher: _selectedVoucher,
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        _selectedVoucher = result;
+        _discount = result.calculateDiscount(cartTotal);
+      });
+    }
   }
 
   @override
@@ -67,6 +96,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     _buildShippingAddress(),
                     const SizedBox(height: 16),
                     _buildOrderItems(cartProvider),
+                    const SizedBox(height: 16),
+                    _buildVoucherSection(),  // ✅ ADD
                     const SizedBox(height: 16),
                     _buildPaymentMethod(),
                     const SizedBox(height: 16),
@@ -108,7 +139,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
-  // ✅ UPDATED: Hiển thị địa chỉ đã chọn hoặc nút thêm mới
   Widget _buildShippingAddress() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -332,6 +362,93 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
+  // ✅ VOUCHER SECTION
+  Widget _buildVoucherSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.local_offer, color: AppColors.primary),
+              const SizedBox(width: 8),
+              const Text('Mã giảm giá', style: AppTextStyles.h3),
+              const Spacer(),
+              TextButton(
+                onPressed: _showVoucherSheet,
+                child: Text(
+                  _selectedVoucher == null ? 'Chọn mã' : 'Thay đổi',
+                  style: const TextStyle(color: AppColors.primary),
+                ),
+              ),
+            ],
+          ),
+          if (_selectedVoucher != null) ...[
+            const Divider(height: 20),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: AppColors.primary, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _selectedVoucher!.code,
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Giảm ${_discount.toStringAsFixed(0)}đ',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () {
+                      setState(() {
+                        _selectedVoucher = null;
+                        _discount = 0;
+                      });
+                      context.read<VoucherProvider>().removeVoucher();
+                    },
+                    icon: const Icon(Icons.close, size: 20),
+                    color: AppColors.textSecondary,
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            const Divider(height: 20),
+            Text(
+              'Chọn hoặc nhập mã giảm giá',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildPaymentMethod() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -379,10 +496,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
+  // ✅ ORDER SUMMARY WITH DISCOUNT
   Widget _buildOrderSummary(CartProvider cartProvider) {
     const shippingFee = 30000.0;
     final subtotal = _calculateTotal(cartProvider);
-    final total = subtotal + shippingFee;
+    final total = subtotal + shippingFee - _discount;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -395,6 +513,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
           _buildSummaryRow('Tạm tính', subtotal),
           const SizedBox(height: 8),
           _buildSummaryRow('Phí vận chuyển', shippingFee),
+          if (_discount > 0) ...[
+            const SizedBox(height: 8),
+            _buildSummaryRow('Giảm giá', -_discount, isDiscount: true),
+          ],
           const Divider(height: 20),
           _buildSummaryRow('Tổng cộng', total, isTotal: true),
         ],
@@ -402,7 +524,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
-  Widget _buildSummaryRow(String label, double amount, {bool isTotal = false}) {
+  // ✅ SUMMARY ROW WITH DISCOUNT STYLING
+  Widget _buildSummaryRow(String label, double amount, {
+    bool isTotal = false,
+    bool isDiscount = false,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -410,22 +536,30 @@ class _CheckoutPageState extends State<CheckoutPage> {
           label,
           style: isTotal
               ? AppTextStyles.h3
-              : AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+              : AppTextStyles.bodyMedium.copyWith(
+                  color: isDiscount ? AppColors.error : AppColors.textSecondary,
+                ),
         ),
         Text(
-          '${amount.toStringAsFixed(0)}đ',
+          '${amount.abs().toStringAsFixed(0)}đ',
           style: isTotal
               ? AppTextStyles.h2.copyWith(color: AppColors.primary)
-              : AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+              : isDiscount
+                  ? AppTextStyles.bodyMedium.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.error,
+                    )
+                  : AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
         ),
       ],
     );
   }
 
+  // ✅ BOTTOM BAR WITH DISCOUNT
   Widget _buildBottomBar(CartProvider cartProvider) {
     const shippingFee = 30000.0;
     final subtotal = _calculateTotal(cartProvider);
-    final total = subtotal + shippingFee;
+    final total = subtotal + shippingFee - _discount;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -452,6 +586,14 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     '${total.toStringAsFixed(0)}đ',
                     style: AppTextStyles.h2.copyWith(color: AppColors.primary),
                   ),
+                  if (_discount > 0)
+                    Text(
+                      'Tiết kiệm ${_discount.toStringAsFixed(0)}đ',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.error,
+                        fontSize: 11,
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -490,7 +632,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
-  // ✅ UPDATED: Validate địa chỉ trước khi đặt hàng
+  // ✅ PLACE ORDER WITH VOUCHER
   Future<void> _placeOrder() async {
     if (_selectedAddress == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -505,13 +647,16 @@ class _CheckoutPageState extends State<CheckoutPage> {
     setState(() => _isProcessing = true);
 
     try {
+      // ✅ FIX: Đổi createOrder → createOrderFromCart
       final order = await context.read<OrderProvider>().createOrderFromCart(
             paymentMethod: _paymentMethod,
             shippingAddress: _selectedAddress!.toJson(),
+            voucherId: _selectedVoucher?.id,  // ✅ SEND VOUCHER ID
           );
 
       if (order != null && mounted) {
         await context.read<CartProvider>().clearCart();
+        context.read<VoucherProvider>().removeVoucher();
 
         Navigator.pushReplacement(
           context,

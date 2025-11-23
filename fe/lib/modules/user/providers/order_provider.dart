@@ -29,7 +29,6 @@ class OrderProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // ✅ FIX: Dùng ApiConfig.ORDERS
       final response = await _apiClient.get(ApiConfig.ORDERS);
 
       print('🔍 Orders Response: ${response.statusCode}');
@@ -49,34 +48,53 @@ class OrderProvider with ChangeNotifier {
     }
   }
 
-  // Create order from cart
+  // ✅ CREATE ORDER FROM CART WITH VOUCHER
   Future<OrderModel?> createOrderFromCart({
     required String paymentMethod,
     required Map<String, dynamic> shippingAddress,
+    String? voucherId,  // ✅ ADD VOUCHER PARAMETER
   }) async {
     try {
-      // ✅ FIX: Dùng ApiConfig.ORDERS
+      print('\n📦 ========== CREATE ORDER (FLUTTER) ==========');
+      print('💳 Payment method: $paymentMethod');
+      print('🎫 Voucher ID: ${voucherId ?? "None"}');
+
+      // ✅ Build request data
+      final requestData = {
+        'paymentMethod': paymentMethod,
+        'shippingAddress': shippingAddress,
+        if (voucherId != null && voucherId.isNotEmpty) 
+          'voucherId': voucherId,  // ✅ INCLUDE VOUCHER
+      };
+
+      print('📤 Request data: $requestData');
+
       final response = await _apiClient.post(
         ApiConfig.ORDERS,
-        data: {
-          'paymentMethod': paymentMethod,
-          'shippingAddress': shippingAddress,
-        },
+        data: requestData,
       );
 
       print('🔍 Create Order Response: ${response.statusCode}');
-      print('🔍 Request URL: ${ApiConfig.ORDERS}');
-      print('🔍 Full URL: ${_apiClient.dio.options.baseUrl}${ApiConfig.ORDERS}');
+      print('🔍 Response data: ${response.data}');
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         final order = OrderModel.fromJson(response.data['order']);
         _orders.insert(0, order);
         notifyListeners();
+        
         print('✅ Order created: ${order.id}');
+        if (voucherId != null) {
+          print('🎫 Voucher applied successfully');
+        }
+        print('📦 ========== CREATE ORDER END ==========\n');
+        
         return order;
+      } else {
+        print('❌ Unexpected status code: ${response.statusCode}');
       }
     } catch (e) {
       print('❌ Error creating order: $e');
+      _error = e.toString();
     }
     return null;
   }
@@ -84,7 +102,6 @@ class OrderProvider with ChangeNotifier {
   // Cancel order
   Future<bool> cancelOrder(String orderId) async {
     try {
-      // ✅ FIX: Dùng ApiConfig.ORDERS
       final response = await _apiClient.put(
         '${ApiConfig.ORDERS}/$orderId/status',
         data: {
