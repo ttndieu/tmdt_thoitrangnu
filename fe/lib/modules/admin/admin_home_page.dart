@@ -83,7 +83,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
                   Icon(Icons.admin_panel_settings_rounded, size: 32, color: cs.primary), // ← MÀU ICON ADMIN
                   const SizedBox(width: 12),
                   Text(
-                    "Admin Panel",
+                    "Admin Salio",
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -139,7 +139,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        "Admin",
+                        "Admin Salio",
                         style: TextStyle(fontWeight: FontWeight.w600, color: cs.onSurface), // ← MÀU CHỮ TÊN ADMIN
                       ),
                       const SizedBox(width: 16),
@@ -216,6 +216,8 @@ class _AdminHomePageState extends State<AdminHomePage> {
       CategoriesPageState.instance!.filter(query);
     } else if (route == AdminRoutes.orders && OrdersPageState.instance != null) {
       OrdersPageState.instance!.filter(query);
+    } else if (route == AdminRoutes.vouchers && VouchersPageState.instance != null) {
+      VouchersPageState.instance!.filter(query);
     }
   }
 

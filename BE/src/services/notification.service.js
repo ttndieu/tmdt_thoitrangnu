@@ -1,25 +1,33 @@
-// be/src/services/notification.service.js
-
 import Notification from "../models/Notification.js";
 
-export const createNotification = async (userId, type, title, message, data = {}) => {
+// -------------------------------------------
+// NOTIFICATION RIÊNG → dành cho đơn hàng, admin
+// -------------------------------------------
+export const createNotification = async (
+  userId,
+  type,
+  title,
+  message,
+  data = {}
+) => {
   try {
-    const notification = await Notification.create({
+    return await Notification.create({
       user: userId,
+      audience: "user",
       type,
       title,
       message,
       data,
     });
-    return notification;
   } catch (err) {
     console.error("Create notification error:", err);
   }
 };
 
-// Helper functions cho từng loại notification
-
-export const notifyOrderStatusChange = async (userId, orderId, status) => {
+// -------------------------------------------
+// ORDER STATUS
+// -------------------------------------------
+export const notifyOrderStatusChange = async (userId, order, status) => {
   const titles = {
     confirmed: "✅ Đơn hàng đã được xác nhận",
     shipping: "🚚 Đơn hàng đang được vận chuyển",
@@ -28,10 +36,10 @@ export const notifyOrderStatusChange = async (userId, orderId, status) => {
   };
 
   const messages = {
-    confirmed: `Đơn hàng #${orderId.toString().slice(-6)} đã được xác nhận và đang được chuẩn bị.`,
-    shipping: `Đơn hàng #${orderId.toString().slice(-6)} đang trên đường giao đến bạn.`,
-    completed: `Đơn hàng #${orderId.toString().slice(-6)} đã được giao thành công. Cảm ơn bạn đã mua hàng!`,
-    cancelled: `Đơn hàng #${orderId.toString().slice(-6)} đã bị hủy. Liên hệ chúng tôi nếu cần hỗ trợ.`,
+    confirmed: `Đơn hàng #${order._id.toString().slice(-6)} đã được xác nhận.`,
+    shipping: `Đơn hàng #${order._id.toString().slice(-6)} đang được vận chuyển.`,
+    completed: `Đơn hàng #${order._id.toString().slice(-6)} đã hoàn thành.`,
+    cancelled: `Đơn hàng #${order._id.toString().slice(-6)} đã bị hủy.`,
   };
 
   await createNotification(
@@ -39,46 +47,49 @@ export const notifyOrderStatusChange = async (userId, orderId, status) => {
     "order",
     titles[status],
     messages[status],
-    { orderId: orderId.toString(), status }
+    { orderId: order._id.toString(), status }
   );
 };
 
-export const notifyNewOrder = async (userId, orderId, totalAmount) => {
+// -------------------------------------------
+// ORDER CREATED FOR USER & ADMIN
+// -------------------------------------------
+export const notifyNewOrder = async (userId, order) => {
+  const shortId = order._id.toString().slice(-6);
+
   await createNotification(
     userId,
     "order",
     "📦 Đơn hàng đã được tạo",
-    `Đơn hàng #${orderId.toString().slice(-6)} với tổng giá trị ${totalAmount.toLocaleString()}đ đã được tạo thành công.`,
-    { orderId: orderId.toString(), totalAmount }
+    `Đơn hàng #${shortId} đã được đặt thành công.`,
+    { orderId: order._id.toString(), totalAmount: order.totalAmount }
   );
+
+  const ADMIN_ID = process.env.ADMIN_USER_ID;
+  if (ADMIN_ID) {
+    await createNotification(
+      ADMIN_ID,
+      "system",
+      "🛒 Có đơn hàng mới",
+      `Đơn hàng #${shortId} vừa được tạo.`,
+      { orderId: order._id.toString(), fromUser: userId.toString() }
+    );
+  }
 };
 
-export const notifyNewVoucher = async (userId, voucherCode, discountPercent) => {
-  await createNotification(
-    userId,
-    "promotion",
-    "🎁 Mã giảm giá mới dành cho bạn",
-    `Sử dụng mã ${voucherCode} để được giảm ${discountPercent}% cho đơn hàng tiếp theo!`,
-    { voucherCode, discountPercent }
-  );
-};
-
-export const notifyWishlistBackInStock = async (userId, productId, productName) => {
-  await createNotification(
-    userId,
-    "product",
-    "🔥 Sản phẩm yêu thích đã về hàng",
-    `${productName} đã quay lại kho. Đặt hàng ngay kẻo hết!`,
-    { productId: productId.toString() }
-  );
-};
-
-export const notifyVoucherExpiring = async (userId, voucherCode, daysLeft) => {
-  await createNotification(
-    userId,
-    "promotion",
-    "⏰ Mã giảm giá sắp hết hạn",
-    `Mã ${voucherCode} sẽ hết hạn trong ${daysLeft} ngày. Sử dụng ngay!`,
-    { voucherCode, daysLeft }
-  );
+// -------------------------------------------
+// BROADCAST VOUCHER — chỉ 1 record
+// -------------------------------------------
+export const notifyAllUsers = async (type, title, message, data = {}) => {
+  try {
+    await Notification.create({
+      audience: "all",
+      type,
+      title,
+      message,
+      data,
+    });
+  } catch (err) {
+    console.error("Notify all users error:", err);
+  }
 };

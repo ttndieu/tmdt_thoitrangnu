@@ -1,31 +1,46 @@
 import Voucher from "../models/Voucher.js";
+import { notifyAllUsers } from "../services/notification.service.js";
 
-// Admin tạo mã
+// ------------------------------
+// Tạo voucher
+// ------------------------------
 export const createVoucher = async (req, res) => {
   try {
     const voucher = await Voucher.create(req.body);
-    return res.status(201).json({ voucher });
+
+    await notifyAllUsers(
+      "voucher",
+      "🎉 Voucher mới!",
+      `Mã ${voucher.code} giảm đến ${voucher.maxDiscount.toLocaleString()}đ đã nằm trong ví. Số lượng có hạn, dùng ngay kẻo hết!`,
+      { voucherId: voucher._id.toString() }
+    );
+
+    res.status(201).json({ voucher });
   } catch (err) {
-    return res.status(500).json({ message: err.message });
-  }
-};
-// lấy danh sách voucher
-export const getAllVouchers = async (req, res) => {
-  try {
-    const vouchers = await Voucher.find();
-    return res.json({ vouchers });
-  } catch (err) {
-    return res.status(500).json({ message: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 
-//User áp dụng voucher (checkout)
+// ------------------------------
+// Danh sách voucher
+// ------------------------------
+export const getAllVouchers = async (req, res) => {
+  try {
+    const vouchers = await Voucher.find();
+    res.json({ vouchers });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// ------------------------------
+// User apply Khi Checkout
+// ------------------------------
 export const applyVoucher = async (req, res) => {
   try {
     const { code, totalAmount } = req.body;
 
     const voucher = await Voucher.findOne({ code });
-
     if (!voucher)
       return res.status(404).json({ message: "Mã giảm giá không tồn tại" });
 
@@ -43,26 +58,25 @@ export const applyVoucher = async (req, res) => {
     if (voucher.quantity <= 0)
       return res.status(400).json({ message: "Mã đã hết lượt dùng" });
 
-    // Tính giảm giá
     const discount = Math.min(
       (totalAmount * voucher.discountPercent) / 100,
       voucher.maxDiscount
     );
 
-    const finalPrice = totalAmount - discount;
-
-    return res.json({
+    res.json({
       success: true,
       discount,
-      finalPrice
+      finalPrice: totalAmount - discount
     });
 
   } catch (err) {
-    return res.status(500).json({ message: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 
-//update voucher
+// ------------------------------
+// Cập nhật voucher
+// ------------------------------
 export const updateVoucher = async (req, res) => {
   try {
     const updated = await Voucher.findByIdAndUpdate(
@@ -71,19 +85,27 @@ export const updateVoucher = async (req, res) => {
       { new: true }
     );
 
-    return res.json({ voucher: updated });
+    await notifyAllUsers(
+      "voucher",
+      "✨ Voucher đã cập nhật!",
+      `Mã ${updated.code} giảm đến ${updated.maxDiscount.toLocaleString()}đ đã được điều chỉnh.`,
+      { voucherId: updated._id.toString() }
+    );
+
+    res.json({ voucher: updated });
   } catch (err) {
-    return res.status(500).json({ message: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 
-
-//xóa voucher
+// ------------------------------
+// Xóa voucher
+// ------------------------------
 export const deleteVoucher = async (req, res) => {
   try {
     await Voucher.findByIdAndDelete(req.params.id);
-    return res.json({ message: "Voucher deleted" });
+    res.json({ message: "Voucher deleted" });
   } catch (err) {
-    return res.status(500).json({ message: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
