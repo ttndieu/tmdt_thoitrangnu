@@ -1,13 +1,19 @@
 // lib/modules/user/screens/mall_page.dart
 
-import 'package:fe/modules/user/constants/app_color.dart';
-import 'package:fe/modules/user/constants/app_text_styles.dart';
-import 'package:fe/modules/user/models/mall_provider.dart';
+import 'package:fe/modules/user/screens/product_detail_page.dart.dart';
 import 'package:fe/modules/user/widgets/home/product_grid.dart';
-import 'package:fe/modules/user/widgets/mall/filter_bottom_sheet.dart';
-import 'package:fe/modules/user/widgets/mall/sort_bottom_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import '../constants/app_color.dart';
+import '../constants/app_text_styles.dart';
+import '../models/mall_provider.dart';
+import '../widgets/home/home_app_bar.dart'; 
+import '../widgets/mall/filter_bottom_sheet.dart';
+import '../widgets/mall/sort_bottom_sheet.dart';
+import '../../auth/providers/auth_provider.dart'; 
+import '../providers/cart_provider.dart'; 
+import 'cart_page.dart'; 
 
 class MallPage extends StatefulWidget {
   const MallPage({Key? key}) : super(key: key);
@@ -28,6 +34,7 @@ class _MallPageState extends State<MallPage>
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
+      context.read<CartProvider>().fetchCart(); // ✅ THÊM
     });
   }
 
@@ -69,6 +76,10 @@ class _MallPageState extends State<MallPage>
   Widget build(BuildContext context) {
     super.build(context);
 
+    // ✅ THÊM: Get userName
+    final authProvider = context.watch<AuthProvider>();
+    final userName = authProvider.user?.name ?? 'Khách';
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -76,8 +87,31 @@ class _MallPageState extends State<MallPage>
           builder: (context, provider, _) {
             return Column(
               children: [
-                // App Bar
-                _buildAppBar(provider),
+                // ✅ THÊM: HomeAppBar với cart & notifications
+                Consumer<CartProvider>(
+                  builder: (context, cartProvider, _) {
+                    return HomeAppBar(
+                      userName: userName,
+                      cartCount: cartProvider.itemCount,
+                      notificationCount: 0,
+                      onCartTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const CartPage(),
+                          ),
+                        );
+                      },
+                      onNotificationTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('🔔 Tính năng thông báo đang phát triển'),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
 
                 // Search Bar
                 _buildSearchBar(provider),
@@ -88,7 +122,10 @@ class _MallPageState extends State<MallPage>
                 // Products Grid
                 Expanded(
                   child: RefreshIndicator(
-                    onRefresh: _loadData,
+                    onRefresh: () async {
+                      await _loadData();
+                      await context.read<CartProvider>().fetchCart();
+                    },
                     color: AppColors.primary,
                     child: _buildProductsGrid(provider),
                   ),
@@ -97,44 +134,6 @@ class _MallPageState extends State<MallPage>
             );
           },
         ),
-      ),
-    );
-  }
-
-  Widget _buildAppBar(MallProvider provider) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          const Text('Cửa hàng', style: AppTextStyles.h1),
-          const Spacer(),
-          if (provider.hasActiveFilters)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                '${provider.products.length}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-        ],
       ),
     );
   }
@@ -190,7 +189,6 @@ class _MallPageState extends State<MallPage>
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Row(
         children: [
-          // Filter Button
           Expanded(
             child: _ActionButton(
               icon: Icons.filter_list,
@@ -200,8 +198,6 @@ class _MallPageState extends State<MallPage>
             ),
           ),
           const SizedBox(width: 12),
-
-          // Sort Button
           Expanded(
             child: _ActionButton(
               icon: Icons.sort,
@@ -243,14 +239,13 @@ class _MallPageState extends State<MallPage>
         return ProductCard(
           product: product,
           onTap: () {
-            // TODO: Navigate to product detail
-            print('Product: ${product.name}');
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ProductDetailPage(product: product),
+              ),
+            );
           },
-          onWishlistTap: () {
-            // TODO: Add/remove wishlist
-            print('Wishlist: ${product.name}');
-          },
-          isWishlisted: false,
         );
       },
     );

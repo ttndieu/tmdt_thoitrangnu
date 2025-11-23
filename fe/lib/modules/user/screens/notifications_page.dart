@@ -1,10 +1,10 @@
 // lib/modules/user/screens/notifications_page.dart
 
-import 'package:fe/modules/user/constants/app_color.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/notification_provider.dart';
+import '../constants/app_color.dart';
 import '../constants/app_text_styles.dart';
+import '../providers/notification_provider.dart';
 import '../models/notification_model.dart';
 
 class NotificationsPage extends StatefulWidget {
@@ -15,11 +15,8 @@ class NotificationsPage extends StatefulWidget {
 }
 
 class _NotificationsPageState extends State<NotificationsPage>
-    with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
+    with SingleTickerProviderStateMixin {
   
-  @override
-  bool get wantKeepAlive => true;
-
   late TabController _tabController;
 
   @override
@@ -64,8 +61,6 @@ class _NotificationsPageState extends State<NotificationsPage>
 
   @override
   Widget build(BuildContext context) {
-    super.build(context);
-
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -117,6 +112,16 @@ class _NotificationsPageState extends State<NotificationsPage>
         builder: (context, provider, _) {
           return Row(
             children: [
+              // ✅ THÊM: Back button
+              if (Navigator.canPop(context))
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.arrow_back),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              if (Navigator.canPop(context)) const SizedBox(width: 12),
+              
               const Text('Thông báo', style: AppTextStyles.h1),
               const SizedBox(width: 8),
               if (provider.unreadCount > 0)
@@ -143,7 +148,8 @@ class _NotificationsPageState extends State<NotificationsPage>
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Đã đánh dấu tất cả là đã đọc'),
+                          content: Text('✅ Đã đánh dấu tất cả là đã đọc'),
+                          duration: Duration(seconds: 2),
                         ),
                       );
                     }
@@ -208,21 +214,15 @@ class _NotificationsPageState extends State<NotificationsPage>
               if (!notification.isRead) {
                 await provider.markAsRead(notification.id);
               }
-              // TODO: Navigate to detail page based on notification type
               _handleNotificationTap(notification);
             },
             onDelete: () async {
               await provider.deleteNotification(notification.id);
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Đã xóa thông báo'),
-                    action: SnackBarAction(
-                      label: 'Hoàn tác',
-                      onPressed: () {
-                        // TODO: Implement undo
-                      },
-                    ),
+                  const SnackBar(
+                    content: Text('🗑️ Đã xóa thông báo'),
+                    duration: Duration(seconds: 2),
                   ),
                 );
               }
@@ -233,16 +233,50 @@ class _NotificationsPageState extends State<NotificationsPage>
     );
   }
 
+  // ✅ SỬA: Handle notification tap
   void _handleNotificationTap(NotificationModel notification) {
-    // TODO: Navigate based on notification type
-    print('Notification tapped: ${notification.title}');
-    print('Data: ${notification.data}');
+    print('📱 Notification tapped: ${notification.title}');
+    print('📦 Type: ${notification.type}');
+    print('📄 Data: ${notification.data}');
     
+    // TODO: Navigate based on notification type
     // Example:
-    // if (notification.type == NotificationType.order) {
-    //   Navigator.pushNamed(context, '/order-detail', 
-    //     arguments: notification.data?['orderId']);
-    // }
+    /*
+    switch (notification.type) {
+      case NotificationType.order:
+        final orderId = notification.data?['orderId'];
+        if (orderId != null) {
+          Navigator.pushNamed(context, '/order-detail', arguments: orderId);
+        }
+        break;
+        
+      case NotificationType.product:
+        final productId = notification.data?['productId'];
+        if (productId != null) {
+          // Fetch product then navigate
+          // Navigator.push(context, MaterialPageRoute(
+          //   builder: (_) => ProductDetailPage(product: product)
+          // ));
+        }
+        break;
+        
+      case NotificationType.promotion:
+        // Navigate to promotion detail
+        break;
+        
+      case NotificationType.system:
+        // Show dialog or navigate to settings
+        break;
+    }
+    */
+    
+    // Temporary: Show snackbar
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('📌 ${notification.title}'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   Widget _buildEmptyState() {
@@ -252,7 +286,7 @@ class _NotificationsPageState extends State<NotificationsPage>
         children: [
           Icon(
             Icons.notifications_off_outlined,
-            size: 80,
+            size: 100,
             color: AppColors.textHint.withOpacity(0.5),
           ),
           const SizedBox(height: 16),
@@ -275,32 +309,35 @@ class _NotificationsPageState extends State<NotificationsPage>
 
   Widget _buildErrorState(NotificationProvider provider) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.error_outline,
-            size: 64,
-            color: AppColors.error,
-          ),
-          const SizedBox(height: 16),
-          const Text('Có lỗi xảy ra', style: AppTextStyles.h2),
-          const SizedBox(height: 8),
-          Text(
-            provider.error!,
-            style: AppTextStyles.bodyMedium,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: _loadData,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              size: 64,
+              color: AppColors.error,
             ),
-            child: const Text('Thử lại'),
-          ),
-        ],
+            const SizedBox(height: 16),
+            const Text('Có lỗi xảy ra', style: AppTextStyles.h2),
+            const SizedBox(height: 8),
+            Text(
+              provider.error!,
+              style: AppTextStyles.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _loadData,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Thử lại'),
+            ),
+          ],
+        ),
       ),
     );
   }

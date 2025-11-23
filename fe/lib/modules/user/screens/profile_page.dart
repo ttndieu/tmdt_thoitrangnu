@@ -1,10 +1,19 @@
 // lib/modules/user/screens/profile_page.dart
 
-import 'package:fe/modules/user/constants/app_color.dart';
-import 'package:fe/modules/user/constants/app_text_styles.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../constants/app_color.dart';
+import '../constants/app_text_styles.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../providers/cart_provider.dart';
+import '../providers/wishlist_provider.dart';
+import 'orders_page.dart';
+import 'addresses_page.dart';
+import 'wishlist_page.dart';
+import 'notifications_page.dart';
+import 'cart_page.dart';
+import 'help_center_page.dart';
+import 'policies_page.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({Key? key}) : super(key: key);
@@ -20,27 +29,18 @@ class ProfilePage extends StatelessWidget {
 
             return CustomScrollView(
               slivers: [
-                // Header with User Info
                 SliverToBoxAdapter(
                   child: _buildHeader(context, user, authProvider),
                 ),
-
-                // Stats Section
                 SliverToBoxAdapter(
                   child: _buildStatsSection(context),
                 ),
-
-                // Menu Items
                 SliverToBoxAdapter(
                   child: _buildMenuSection(context, authProvider),
                 ),
-
-                // Logout Button
                 SliverToBoxAdapter(
                   child: _buildLogoutButton(context, authProvider),
                 ),
-
-                // Bottom Padding
                 const SliverToBoxAdapter(
                   child: SizedBox(height: 40),
                 ),
@@ -67,7 +67,6 @@ class ProfilePage extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Avatar
           Stack(
             children: [
               Container(
@@ -76,29 +75,24 @@ class ProfilePage extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 4),
-                  image: user?.avatar != null
-                      ? DecorationImage(
-                          image: NetworkImage(user.avatar),
-                          fit: BoxFit.cover,
-                        )
-                      : null,
                   color: Colors.white.withOpacity(0.2),
                 ),
-                child: user?.avatar == null
-                    ? const Icon(
-                        Icons.person,
-                        size: 50,
-                        color: Colors.white,
-                      )
-                    : null,
+                child: const Icon(
+                  Icons.person,
+                  size: 50,
+                  color: Colors.white,
+                ),
               ),
               Positioned(
                 bottom: 0,
                 right: 0,
                 child: GestureDetector(
                   onTap: () {
-                    // TODO: Navigate to edit profile
-                    print('Edit avatar');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('📸 Tính năng đổi avatar đang phát triển'),
+                      ),
+                    );
                   },
                   child: Container(
                     padding: const EdgeInsets.all(8),
@@ -123,8 +117,6 @@ class ProfilePage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-
-          // User Name
           Text(
             user?.name ?? 'Khách',
             style: const TextStyle(
@@ -134,8 +126,6 @@ class ProfilePage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-
-          // User Email
           Text(
             user?.email ?? 'guest@example.com',
             style: TextStyle(
@@ -144,12 +134,13 @@ class ProfilePage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-
-          // Edit Profile Button
           GestureDetector(
             onTap: () {
-              // TODO: Navigate to edit profile
-              print('Edit profile');
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('✏️ Tính năng chỉnh sửa hồ sơ đang phát triển'),
+                ),
+              );
             },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
@@ -180,40 +171,67 @@ class ProfilePage extends StatelessWidget {
   }
 
   Widget _buildStatsSection(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Row(
-        children: [
-          Expanded(
-            child: _StatCard(
-              icon: Icons.shopping_bag_outlined,
-              count: '12',
-              label: 'Đơn hàng',
-              color: AppColors.primary,
-            ),
+  return Padding(
+    padding: const EdgeInsets.all(20),
+    child: Row(
+      children: [
+        Expanded(
+          child: _StatCard(
+            icon: Icons.shopping_bag_outlined,
+            count: '0',
+            label: 'Đơn hàng',
+            color: AppColors.primary,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const OrdersPage()),
+              );
+            },
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _StatCard(
-              icon: Icons.favorite_outline,
-              count: '24',
-              label: 'Yêu thích',
-              color: Colors.red,
-            ),
+        ),
+        const SizedBox(width: 12),
+        // ✅ WISHLIST CARD
+        Expanded(
+          child: Consumer<WishlistProvider>(
+            builder: (context, wishlistProvider, _) {
+              return _StatCard(
+                icon: Icons.favorite_outline,
+                count: '${wishlistProvider.count}', // ✅ SỬ DỤNG count
+                label: 'Yêu thích',
+                color: Colors.red,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const WishlistPage()),
+                  );
+                },
+              );
+            },
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _StatCard(
-              icon: Icons.star_outline,
-              count: '150',
-              label: 'Điểm',
-              color: Colors.orange,
-            ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Consumer<CartProvider>(
+            builder: (context, cartProvider, _) {
+              return _StatCard(
+                icon: Icons.shopping_cart_outlined,
+                count: '${cartProvider.itemCount}',
+                label: 'Giỏ hàng',
+                color: Colors.orange,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const CartPage()),
+                  );
+                },
+              );
+            },
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildMenuSection(BuildContext context, AuthProvider authProvider) {
     return Padding(
@@ -221,7 +239,6 @@ class ProfilePage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Section: Account
           const Text('Tài khoản', style: AppTextStyles.h3),
           const SizedBox(height: 12),
           Container(
@@ -242,8 +259,10 @@ class ProfilePage extends StatelessWidget {
                   title: 'Đơn hàng của tôi',
                   subtitle: 'Xem lịch sử đơn hàng',
                   onTap: () {
-                    // TODO: Navigate to orders
-                    print('Orders');
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const OrdersPage()),
+                    );
                   },
                 ),
                 _buildDivider(),
@@ -251,30 +270,36 @@ class ProfilePage extends StatelessWidget {
                   icon: Icons.location_on_outlined,
                   title: 'Địa chỉ',
                   subtitle: 'Quản lý địa chỉ giao hàng',
-                  badge: authProvider.user?.addresses.length.toString(),
                   onTap: () {
-                    // TODO: Navigate to addresses
-                    print('Addresses');
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AddressesPage()),
+                    );
                   },
                 ),
                 _buildDivider(),
-                _MenuItem(
-                  icon: Icons.favorite_border,
-                  title: 'Yêu thích',
-                  subtitle: 'Sản phẩm đã lưu',
-                  badge: authProvider.user?.wishlist.length.toString(),
-                  onTap: () {
-                    // TODO: Navigate to wishlist
-                    print('Wishlist');
+                Consumer<WishlistProvider>(
+                  builder: (context, wishlistProvider, _) {
+                    return _MenuItem(
+                      icon: Icons.favorite_border,
+                      title: 'Yêu thích',
+                      subtitle: 'Sản phẩm đã lưu',
+                      badge: wishlistProvider.count > 0 
+                      ? '${wishlistProvider.count}' 
+                      : null,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const WishlistPage()),
+                        );
+                      },
+                    );
                   },
                 ),
               ],
             ),
           ),
-
           const SizedBox(height: 24),
-
-          // Section: Settings
           const Text('Cài đặt', style: AppTextStyles.h3),
           const SizedBox(height: 12),
           Container(
@@ -295,8 +320,10 @@ class ProfilePage extends StatelessWidget {
                   title: 'Thông báo',
                   subtitle: 'Cài đặt thông báo',
                   onTap: () {
-                    // TODO: Navigate to notification settings
-                    print('Notifications settings');
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const NotificationsPage()),
+                    );
                   },
                 ),
                 _buildDivider(),
@@ -305,8 +332,11 @@ class ProfilePage extends StatelessWidget {
                   title: 'Ngôn ngữ',
                   subtitle: 'Tiếng Việt',
                   onTap: () {
-                    // TODO: Change language
-                    print('Language');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('🌐 Tính năng đổi ngôn ngữ đang phát triển'),
+                      ),
+                    );
                   },
                 ),
                 _buildDivider(),
@@ -315,17 +345,17 @@ class ProfilePage extends StatelessWidget {
                   title: 'Giao diện',
                   subtitle: 'Sáng',
                   onTap: () {
-                    // TODO: Change theme
-                    print('Theme');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('🌙 Tính năng chế độ tối đang phát triển'),
+                      ),
+                    );
                   },
                 ),
               ],
             ),
           ),
-
           const SizedBox(height: 24),
-
-          // Section: Support
           const Text('Hỗ trợ', style: AppTextStyles.h3),
           const SizedBox(height: 12),
           Container(
@@ -346,8 +376,10 @@ class ProfilePage extends StatelessWidget {
                   title: 'Trung tâm hỗ trợ',
                   subtitle: 'FAQ & Hướng dẫn',
                   onTap: () {
-                    // TODO: Navigate to help center
-                    print('Help center');
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const HelpCenterPage()),
+                    );
                   },
                 ),
                 _buildDivider(),
@@ -356,8 +388,10 @@ class ProfilePage extends StatelessWidget {
                   title: 'Chính sách',
                   subtitle: 'Điều khoản & Bảo mật',
                   onTap: () {
-                    // TODO: Navigate to policies
-                    print('Policies');
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const PoliciesPage()),
+                    );
                   },
                 ),
                 _buildDivider(),
@@ -366,8 +400,7 @@ class ProfilePage extends StatelessWidget {
                   title: 'Về chúng tôi',
                   subtitle: 'Phiên bản 1.0.0',
                   onTap: () {
-                    // TODO: Navigate to about
-                    print('About');
+                    _showAboutDialog(context);
                   },
                 ),
               ],
@@ -433,9 +466,12 @@ class ProfilePage extends StatelessWidget {
           ),
           TextButton(
             onPressed: () async {
+              context.read<CartProvider>().clear();
+              context.read<WishlistProvider>().clear();
+              
               await authProvider.logout();
               if (context.mounted) {
-                Navigator.pop(context); // Close dialog
+                Navigator.pop(context);
                 Navigator.pushNamedAndRemoveUntil(
                   context,
                   '/login',
@@ -452,61 +488,55 @@ class ProfilePage extends StatelessWidget {
       ),
     );
   }
-}
 
-// Stats Card Widget
-class _StatCard extends StatelessWidget {
-  final IconData icon;
-  final String count;
-  final String label;
-  final Color color;
-
-  const _StatCard({
-    required this.icon,
-    required this.count,
-    required this.label,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              shape: BoxShape.circle,
+  void _showAboutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: const Text('Về chúng tôi'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: AppColors.primaryGradient,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.shopping_bag,
+                size: 48,
+                color: Colors.white,
+              ),
             ),
-            child: Icon(icon, color: color, size: 24),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            count,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: color,
+            const SizedBox(height: 16),
+            const Text(
+              'Fashion App',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.textSecondary,
+            const SizedBox(height: 8),
+            const Text(
+              'Phiên bản 1.0.0',
+              style: TextStyle(color: AppColors.textSecondary),
             ),
+            const SizedBox(height: 16),
+            const Text(
+              'Ứng dụng mua sắm thời trang trực tuyến',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Đóng'),
           ),
         ],
       ),
@@ -514,7 +544,71 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-// Menu Item Widget
+class _StatCard extends StatelessWidget {
+  final IconData icon;
+  final String count;
+  final String label;
+  final Color color;
+  final VoidCallback? onTap;
+
+  const _StatCard({
+    required this.icon,
+    required this.count,
+    required this.label,
+    required this.color,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              count,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _MenuItem extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -539,7 +633,6 @@ class _MenuItem extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            // Icon
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
@@ -549,8 +642,6 @@ class _MenuItem extends StatelessWidget {
               child: Icon(icon, color: AppColors.primary, size: 22),
             ),
             const SizedBox(width: 16),
-
-            // Title & Subtitle
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -571,8 +662,6 @@ class _MenuItem extends StatelessWidget {
                 ],
               ),
             ),
-
-            // Badge
             if (badge != null) ...[
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -594,8 +683,6 @@ class _MenuItem extends StatelessWidget {
               ),
               const SizedBox(width: 8),
             ],
-
-            // Arrow
             const Icon(
               Icons.arrow_forward_ios,
               size: 16,
