@@ -188,26 +188,61 @@ if (data.containsKey('unreadCount')) {
   }
 
   // Mark as read
-  Future<void> markAsRead(String notificationId) async {
-    try {
-      print('📝 Marking notification as read: $notificationId');
-      final response = await _apiClient.put(
-        ApiConfig.notificationRead(notificationId),
-      );
-
-      if (response.statusCode == 200) {
-        final index = _notifications.indexWhere((n) => n.id == notificationId);
-        if (index != -1 && !_notifications[index].isRead) {
-          _notifications[index] = _notifications[index].copyWith(isRead: true);
-          _unreadCount = (_unreadCount - 1).clamp(0, 999);
-          print('✅ Marked as read. New unreadCount: $_unreadCount');
-          notifyListeners();
-        }
-      }
-    } catch (e) {
-      print('❌ Mark as read error: $e');
+Future<void> markAsRead(String notificationId) async {
+  try {
+    print('');
+    print('📝 ========== MARK AS READ ==========');
+    print('📝 Notification ID: $notificationId');
+    
+    // Find notification
+    final index = _notifications.indexWhere((n) => n.id == notificationId);
+    if (index == -1) {
+      print('❌ Notification not found in list');
+      return;
     }
+    
+    final notification = _notifications[index];
+    print('📝 Title: "${notification.title}"');
+    print('📝 Type: ${notification.type}');
+    print('📝 isRead BEFORE: ${notification.isRead}');
+    
+    if (notification.isRead) {
+      print('ℹ️ Already read, skipping API call');
+      print('📝 ========== MARK AS READ END ==========\n');
+      return;
+    }
+    
+    // Call API
+    print('📡 Calling API: ${ApiConfig.notificationRead(notificationId)}');
+    final response = await _apiClient.put(
+      ApiConfig.notificationRead(notificationId),
+    );
+
+    print('✅ Response status: ${response.statusCode}');
+    print('✅ Response data: ${response.data}');
+
+    if (response.statusCode == 200) {
+      // Update in memory
+      _notifications[index] = _notifications[index].copyWith(isRead: true);
+      _unreadCount = (_unreadCount - 1).clamp(0, 999);
+      
+      print('✅ Updated in memory');
+      print('📝 isRead AFTER: true');
+      print('🔔 New unreadCount: $_unreadCount');
+      
+      notifyListeners();
+    } else {
+      print('❌ Unexpected status code: ${response.statusCode}');
+    }
+    
+    print('📝 ========== MARK AS READ END ==========\n');
+  } catch (e, stackTrace) {
+    print('❌ ❌ ❌ MARK AS READ ERROR ❌ ❌ ❌');
+    print('❌ Error: $e');
+    print('❌ Stack trace: $stackTrace');
+    print('');
   }
+}
 
   // Mark all as read
   Future<void> markAllAsRead() async {

@@ -32,7 +32,7 @@ const notificationSchema = new mongoose.Schema({
   isRead: { type: Boolean, default: false },
 
   // user nào đã đọc broadcast
-  isReadBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+  isReadBy: [{ type: String }],
 
   createdAt: { type: Date, default: Date.now },
 });
