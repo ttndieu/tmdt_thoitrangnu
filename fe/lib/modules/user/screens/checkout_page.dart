@@ -498,7 +498,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   // ✅ ORDER SUMMARY WITH DISCOUNT
   Widget _buildOrderSummary(CartProvider cartProvider) {
-    const shippingFee = 30000.0;
+    const shippingFee = 15000.0;
     final subtotal = _calculateTotal(cartProvider);
     final total = subtotal + shippingFee - _discount;
 
@@ -557,7 +557,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   // ✅ BOTTOM BAR WITH DISCOUNT
   Widget _buildBottomBar(CartProvider cartProvider) {
-    const shippingFee = 30000.0;
+    const shippingFee = 15000.0;
     final subtotal = _calculateTotal(cartProvider);
     final total = subtotal + shippingFee - _discount;
 

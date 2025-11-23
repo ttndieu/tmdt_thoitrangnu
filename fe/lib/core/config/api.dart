@@ -26,6 +26,8 @@ class ApiConfig {
   // Cart & Orders
   static const String CART = "/api/cart";
   static const String ORDERS = "/api/orders";
+
+  static String cancelOrder(String orderId) => "/api/orders/$orderId/cancel";
   
   // Wishlist
   static const String WISHLIST = "/api/wishlist";

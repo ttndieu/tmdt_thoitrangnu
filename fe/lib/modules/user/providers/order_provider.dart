@@ -52,19 +52,18 @@ class OrderProvider with ChangeNotifier {
   Future<OrderModel?> createOrderFromCart({
     required String paymentMethod,
     required Map<String, dynamic> shippingAddress,
-    String? voucherId,  // ✅ ADD VOUCHER PARAMETER
+    String? voucherId,
   }) async {
     try {
       print('\n📦 ========== CREATE ORDER (FLUTTER) ==========');
       print('💳 Payment method: $paymentMethod');
       print('🎫 Voucher ID: ${voucherId ?? "None"}');
 
-      // ✅ Build request data
       final requestData = {
         'paymentMethod': paymentMethod,
         'shippingAddress': shippingAddress,
         if (voucherId != null && voucherId.isNotEmpty) 
-          'voucherId': voucherId,  // ✅ INCLUDE VOUCHER
+          'voucherId': voucherId,
       };
 
       print('📤 Request data: $requestData');
@@ -99,26 +98,44 @@ class OrderProvider with ChangeNotifier {
     return null;
   }
 
-  // Cancel order
+  // ✅ CANCEL ORDER - SỬA LẠI ĐỂ GỌI ĐÚNG ENDPOINT
   Future<bool> cancelOrder(String orderId) async {
     try {
+      print('\n🚫 ========== CANCEL ORDER (FLUTTER) ==========');
+      print('📦 Order ID: $orderId');
+
+      // ✅ GỌI ĐÚNG ENDPOINT: /api/orders/:id/cancel
       final response = await _apiClient.put(
-        '${ApiConfig.ORDERS}/$orderId/status',
-        data: {
-          'status': 'cancelled',
-        },
+        '${ApiConfig.ORDERS}/$orderId/cancel',
+        data: {}, // Không cần truyền data
       );
 
+      print('🔍 Cancel Response: ${response.statusCode}');
+      print('🔍 Response data: ${response.data}');
+
       if (response.statusCode == 200) {
+        // ✅ Update order trong danh sách
         final index = _orders.indexWhere((o) => o.id == orderId);
         if (index != -1) {
           _orders[index] = OrderModel.fromJson(response.data['order']);
           notifyListeners();
+          print('✅ Order cancelled successfully');
         }
+        
+        print('🚫 ========== CANCEL ORDER END ==========\n');
         return true;
       }
     } catch (e) {
       print('❌ Error canceling order: $e');
+      _error = e.toString();
+      
+      // Throw error message để UI hiển thị
+      if (e.toString().contains('Chỉ có thể hủy đơn hàng ở trạng thái chờ xác nhận')) {
+        throw 'Chỉ có thể hủy đơn hàng ở trạng thái chờ xác nhận';
+      } else if (e.toString().contains('không có quyền')) {
+        throw 'Bạn không có quyền hủy đơn hàng này';
+      }
+      throw 'Không thể hủy đơn hàng. Vui lòng thử lại';
     }
     return false;
   }

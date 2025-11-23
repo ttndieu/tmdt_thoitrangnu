@@ -15,7 +15,7 @@ import Voucher from "../models/Voucher.js";
 // ------------------------------------------------------
 export const createOrder = async (req, res) => {
   try {
-    const { paymentMethod, shippingAddress, voucherId } = req.body;  // ✅ ADD voucherId
+    const { paymentMethod, shippingAddress, voucherId } = req.body;
 
     console.log(`\n📦 ========== CREATE ORDER ==========`);
     console.log(`👤 User: ${req.user._id}`);
@@ -161,7 +161,8 @@ export const createOrder = async (req, res) => {
 export const getMyOrders = async (req, res) => {
   try {
     const orders = await Order.find({ user: req.user._id })
-      .populate("items.product", "name images");
+      .populate("items.product", "name images")
+      .sort({ createdAt: -1 });
 
     return res.json({ orders });
   } catch (err) {
@@ -176,7 +177,8 @@ export const getAllOrders = async (req, res) => {
   try {
     const orders = await Order.find()
       .populate("user", "name email")
-      .populate("items.product", "name images");
+      .populate("items.product", "name images")
+      .sort({ createdAt: -1 });
 
     return res.json({ count: orders.length, orders });
   } catch (err) {
@@ -212,5 +214,130 @@ export const updateOrderStatus = async (req, res) => {
     return res.json({ order });
   } catch (err) {
     return res.status(500).json({ message: err.message });
+  }
+};
+
+// ------------------------------------------------------
+// ✅ USER CANCEL ORDER
+// ------------------------------------------------------
+export const cancelOrder = async (req, res) => {
+  try {
+    const orderId = req.params.id;
+    const userId = req.user._id;
+
+    console.log(`\n🚫 ========== CANCEL ORDER ==========`);
+    console.log(`👤 User: ${userId}`);
+    console.log(`📦 Order ID: ${orderId}`);
+
+    // ✅ Tìm order VÀ populate items.product
+    const order = await Order.findById(orderId).populate("items.product");
+
+    if (!order) {
+      console.log('❌ Order not found');
+      return res.status(404).json({ message: "Đơn hàng không tồn tại" });
+    }
+
+    console.log(`✅ Found order: ${order._id}`);
+    console.log(`📊 Order status: ${order.status}`);
+    console.log(`👤 Order user: ${order.user}`);
+
+    // ✅ CHECK: Order thuộc về user này không?
+    if (order.user.toString() !== userId.toString()) {
+      console.log('❌ Unauthorized user');
+      return res.status(403).json({ message: "Bạn không có quyền hủy đơn hàng này" });
+    }
+
+    // ✅ CHECK: Chỉ hủy được đơn ở trạng thái pending
+    if (order.status !== "pending") {
+      console.log(`❌ Cannot cancel. Status: ${order.status}`);
+      return res.status(400).json({ 
+        message: "Chỉ có thể hủy đơn hàng ở trạng thái chờ xác nhận" 
+      });
+    }
+
+    // ✅ HOÀN LẠI TỒN KHO
+    console.log(`📦 Hoàn lại tồn kho...`);
+    for (let item of order.items) {
+      try {
+        await Product.updateOne(
+          {
+            _id: item.product._id,
+            "variants.size": item.size,
+            "variants.color": item.color
+          },
+          { $inc: { "variants.$.stock": item.quantity } }
+        );
+        console.log(`✅ Hoàn lại ${item.quantity} sản phẩm ${item.product.name}`);
+      } catch (productErr) {
+        console.error(`❌ Error restoring stock for product ${item.product._id}:`, productErr);
+        // Continue even if one product fails
+      }
+    }
+
+    // ✅ HOÀN LẠI VOUCHER (NẾU CÓ)
+    if (order.voucher) {
+      console.log(`🎫 Hoàn lại voucher: ${order.voucherCode}`);
+      
+      try {
+        const voucher = await Voucher.findById(order.voucher);
+        
+        if (voucher) {
+          // Tăng quantity
+          voucher.quantity += 1;
+          
+          // Xóa user khỏi danh sách usedBy (nếu có field này)
+          if (voucher.usedBy && Array.isArray(voucher.usedBy)) {
+            voucher.usedBy = voucher.usedBy.filter(
+              uid => uid.toString() !== userId.toString()
+            );
+          }
+          
+          await voucher.save();
+          
+          console.log(`✅ Đã hoàn lại voucher ${order.voucherCode}`);
+          console.log(`✅ Quantity: ${voucher.quantity}`);
+          if (voucher.usedBy) {
+            console.log(`✅ UsedBy length: ${voucher.usedBy.length}`);
+          }
+        } else {
+          console.log(`⚠️ Voucher ${order.voucher} not found, skipping restore`);
+        }
+      } catch (voucherErr) {
+        console.error(`❌ Error restoring voucher:`, voucherErr);
+        // Continue even if voucher restore fails
+      }
+    }
+
+    // ✅ UPDATE STATUS
+    order.status = "cancelled";
+    await order.save();
+
+    console.log(`✅ Order ${orderId} đã bị hủy`);
+    console.log(`🚫 ========== CANCEL ORDER END ==========\n`);
+
+    // Thông báo hủy đơn
+    try {
+      await notifyOrderStatusChange(userId, order, "cancelled");
+    } catch (notifyErr) {
+      console.error('❌ Error sending notification:', notifyErr);
+      // Continue even if notification fails
+    }
+
+    // Load lại order với đầy đủ thông tin
+    const cancelledOrder = await Order.findById(orderId)
+      .populate("items.product", "name images")
+      .populate("voucher");
+
+    return res.json({ 
+      message: "Đã hủy đơn hàng thành công",
+      order: cancelledOrder 
+    });
+
+  } catch (err) {
+    console.error('❌ Cancel order error:', err);
+    console.error('❌ Error stack:', err.stack);
+    return res.status(500).json({ 
+      message: err.message || "Lỗi server khi hủy đơn hàng"
+    });
   }
 };

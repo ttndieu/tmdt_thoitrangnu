@@ -12,6 +12,11 @@ class OrderModel {
   final ShippingAddress shippingAddress;
   final DateTime createdAt;
   final DateTime updatedAt;
+  
+  // ✅ THÊM VOUCHER FIELDS
+  final String? voucherCode;
+  final double? discount;
+  final double? originalAmount;
 
   OrderModel({
     required this.id,
@@ -25,6 +30,9 @@ class OrderModel {
     required this.shippingAddress,
     required this.createdAt,
     required this.updatedAt,
+    this.voucherCode,        // ✅ NULLABLE
+    this.discount,           // ✅ NULLABLE
+    this.originalAmount,     // ✅ NULLABLE
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
@@ -47,6 +55,14 @@ class OrderModel {
       updatedAt: json['updatedAt'] != null
           ? DateTime.parse(json['updatedAt'])
           : DateTime.now(),
+      // ✅ PARSE VOUCHER FIELDS
+      voucherCode: json['voucherCode'],
+      discount: json['discount'] != null 
+          ? (json['discount'] as num).toDouble() 
+          : null,
+      originalAmount: json['originalAmount'] != null
+          ? (json['originalAmount'] as num).toDouble()
+          : null,
     );
   }
 
@@ -63,6 +79,10 @@ class OrderModel {
       'shippingAddress': shippingAddress.toJson(),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      // ✅ ADD VOUCHER FIELDS
+      if (voucherCode != null) 'voucherCode': voucherCode,
+      if (discount != null) 'discount': discount,
+      if (originalAmount != null) 'originalAmount': originalAmount,
     };
   }
 
@@ -107,6 +127,14 @@ class OrderModel {
 
   bool get canCancel {
     return status == 'pending' || status == 'confirmed';
+  }
+  
+  // CHECK NẾU CÓ VOUCHER
+  bool get hasVoucher {
+    return voucherCode != null && 
+           voucherCode!.isNotEmpty && 
+           discount != null && 
+           discount! > 0;
   }
 }
 
