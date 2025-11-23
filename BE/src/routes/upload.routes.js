@@ -9,9 +9,18 @@ import {
 
 import { verifyToken } from "../middlewares/auth.middleware.js";
 import { requireRole } from "../middlewares/role.middleware.js";
+import { uploadAvatar } from "../controllers/upload.controller.js";
+
 
 const router = express.Router();
 
+// Upload avatar người dùng
+router.post(
+  "/avatar",
+  verifyToken, // CHỈ CẦN LOGIN
+  upload.single("avatar"),
+  uploadAvatar
+);
 
 // Upload mới
 router.post(

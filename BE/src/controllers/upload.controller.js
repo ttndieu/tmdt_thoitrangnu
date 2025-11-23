@@ -11,6 +11,48 @@ cloudinary.config({
 });
 
 // ----------------------------
+// 1) UPLOAD AVATAR NGƯỜI DÙNG
+// ----------------------------
+export const uploadAvatar = async (req, res) => {
+  try {
+    console.log('\n📸 ========== UPLOAD AVATAR ==========');
+    console.log('👤 User ID:', req.user._id);
+
+    if (!req.file) {
+      return res.status(400).json({ message: "Vui lòng chọn ảnh" });
+    }
+
+    const fileStr = req.file.buffer.toString("base64");
+
+    // Upload lên folder avatars
+    const uploaded = await cloudinary.uploader.upload(
+      `data:${req.file.mimetype};base64,${fileStr}`,
+      { 
+        folder: "avatars",
+        transformation: [
+          { width: 500, height: 500, crop: "fill" },
+          { quality: "auto" }
+        ]
+      }
+    );
+
+    console.log('✅ Avatar uploaded');
+    console.log('🖼️ URL:', uploaded.secure_url);
+    console.log('📸 ========== UPLOAD AVATAR END ==========\n');
+
+    return res.json({
+      message: "Upload thành công",
+      imageUrl: uploaded.secure_url,
+      public_id: uploaded.public_id
+    });
+
+  } catch (err) {
+    console.error('❌ Upload avatar error:', err);
+    return res.status(500).json({ message: err.message });
+  }
+};
+
+// ----------------------------
 // 1) UPLOAD ẢNH + TẠO FOLDER
 // ----------------------------
 export const uploadImage = async (req, res) => {

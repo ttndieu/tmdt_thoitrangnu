@@ -1,5 +1,6 @@
 // lib/modules/user/screens/profile_page.dart
 
+import 'package:fe/modules/user/screens/edit_profile_page.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../constants/app_color.dart';
@@ -53,122 +54,163 @@ class ProfilePage extends StatelessWidget {
   }
 
   Widget _buildHeader(BuildContext context, dynamic user, AuthProvider authProvider) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: AppColors.primaryGradient,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Stack(
-            children: [
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 4),
-                  color: Colors.white.withOpacity(0.2),
-                ),
-                child: const Icon(
-                  Icons.person,
-                  size: 50,
-                  color: Colors.white,
-                ),
-              ),
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: GestureDetector(
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('📸 Tính năng đổi avatar đang phát triển'),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 8,
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.camera_alt,
-                      size: 18,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            user?.name ?? 'Khách',
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            user?.email ?? 'guest@example.com',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.white.withOpacity(0.9),
-            ),
-          ),
-          const SizedBox(height: 16),
-          GestureDetector(
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('✏️ Tính năng chỉnh sửa hồ sơ đang phát triển'),
-                ),
-              );
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+  return Container(
+    padding: const EdgeInsets.all(24),
+    decoration: BoxDecoration(
+      gradient: AppColors.primaryGradient,
+      boxShadow: [
+        BoxShadow(
+          color: AppColors.primary.withOpacity(0.3),
+          blurRadius: 20,
+          offset: const Offset(0, 5),
+        ),
+      ],
+    ),
+    child: Column(
+      children: [
+        Stack(
+          children: [
+            Container(
+              width: 100,
+              height: 100,
               decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 4),
                 color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.white, width: 1),
               ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.edit, size: 16, color: Colors.white),
-                  SizedBox(width: 8),
-                  Text(
-                    'Chỉnh sửa hồ sơ',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
+              child: ClipOval(
+                child: _buildUserAvatar(user),
               ),
             ),
+            Positioned(
+              bottom: 0,
+              right: 0,
+              child: GestureDetector(
+                onTap: () async {
+                  // Navigate to edit profile và refresh khi quay lại
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const EditProfilePage()),
+                  );
+                  
+                  // Refresh nếu có thay đổi
+                  if (result == true) {
+                    // Force rebuild để hiển thị avatar mới
+                    authProvider.notifyListeners();
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 8,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.camera_alt,
+                    size: 18,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Text(
+          user?.name ?? 'Khách',
+          style: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
           ),
-        ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          user?.email ?? 'guest@example.com',
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.white.withOpacity(0.9),
+          ),
+        ),
+        const SizedBox(height: 16),
+        GestureDetector(
+          onTap: () async {
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const EditProfilePage()),
+            );
+            
+            if (result == true) {
+              authProvider.notifyListeners();
+            }
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white, width: 1),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.edit, size: 16, color: Colors.white),
+                SizedBox(width: 8),
+                Text(
+                  'Chỉnh sửa hồ sơ',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+// ✅ THÊM FUNCTION HIỂN THỊ AVATAR
+Widget _buildUserAvatar(dynamic user) {
+  if (user?.avatar != null && user!.avatar!.isNotEmpty) {
+    return Image.network(
+      user.avatar!,
+      fit: BoxFit.cover,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return Center(
+          child: CircularProgressIndicator(
+            value: loadingProgress.expectedTotalBytes != null
+                ? loadingProgress.cumulativeBytesLoaded /
+                    loadingProgress.expectedTotalBytes!
+                : null,
+            strokeWidth: 2,
+            color: Colors.white,
+          ),
+        );
+      },
+      errorBuilder: (_, __, ___) => const Icon(
+        Icons.person,
+        size: 50,
+        color: Colors.white,
       ),
     );
   }
+
+  return const Icon(
+    Icons.person,
+    size: 50,
+    color: Colors.white,
+  );
+}
 
   Widget _buildStatsSection(BuildContext context) {
   return Padding(
@@ -514,7 +556,7 @@ class ProfilePage extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             const Text(
-              'Fashion App',
+              'Salio - Fashion App',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
