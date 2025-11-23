@@ -1,30 +1,41 @@
+// be/src/controllers/order.controller.js
+
 import Order from "../models/Order.js";
 import Cart from "../models/Cart.js";
 import Product from "../models/Product.js";
 import { sendOrderEmail } from "../services/mail.service.js";
-import { notifyNewOrder, notifyOrderStatusChange } from "../services/notification.service.js";
+import {
+  notifyNewOrder,
+  notifyOrderStatusChange
+} from "../services/notification.service.js";
 
-// POST /api/orders
+// ------------------------------------------------------
+// CREATE ORDER (USER)
+// ------------------------------------------------------
 export const createOrder = async (req, res) => {
   try {
     const { paymentMethod, shippingAddress } = req.body;
 
-    const cart = await Cart.findOne({ user: req.user._id }).populate("items.product");
+    const cart = await Cart.findOne({ user: req.user._id })
+      .populate("items.product");
 
     if (!cart || cart.items.length === 0)
       return res.status(400).json({ message: "Cart is empty" });
 
     let total = 0;
 
-    // Check tồn kho và tính tổng tiền
+    // Check tồn kho & tính tổng
     for (let item of cart.items) {
       const product = item.product;
+
       const variant = product.variants.find(
         (v) => v.size === item.size && v.color === item.color
       );
 
       if (!variant || variant.stock < item.quantity)
-        return res.status(400).json({ message: `Not enough stock for ${product.name}` });
+        return res.status(400).json({
+          message: `Not enough stock for ${product.name}`
+        });
 
       total += variant.price * item.quantity;
     }
@@ -35,15 +46,13 @@ export const createOrder = async (req, res) => {
         {
           _id: item.product._id,
           "variants.size": item.size,
-          "variants.color": item.color,
+          "variants.color": item.color
         },
-        {
-          $inc: { "variants.$.stock": -item.quantity },
-        }
+        { $inc: { "variants.$.stock": -item.quantity } }
       );
     }
 
-    // Tạo order
+    // Tạo đơn hàng
     const order = await Order.create({
       user: req.user._id,
       items: cart.items.map((i) => ({
@@ -58,33 +67,37 @@ export const createOrder = async (req, res) => {
       totalAmount: total,
       paymentMethod,
       shippingAddress,
-      status: "pending",
+      status: "pending"
     });
 
-    // Gửi notification cho user
-    await notifyNewOrder(req.user._id, order._id, total);
-    // Gửi email cho user
-await sendOrderEmail(req.user.email, order);
+    // Load lại order để lấy thông tin product.name
+    const fullOrder = await Order.findById(order._id)
+      .populate("items.product", "name");
 
-    // Xóa giỏ hàng sau khi đặt hàng thành công
+    // Thông báo (user + admin)
+    await notifyNewOrder(req.user._id, fullOrder);
+
+    // Email
+    await sendOrderEmail(req.user.email, fullOrder);
+
+    // Xoá giỏ hàng
     cart.items = [];
     await cart.save();
 
-    return res.status(201).json({ order });
+    return res.status(201).json({ order: fullOrder });
 
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }
 };
 
-
-// GET /api/orders (user orders)
+// ------------------------------------------------------
+// USER GET ORDERS
+// ------------------------------------------------------
 export const getMyOrders = async (req, res) => {
   try {
-    const orders = await Order.find({ user: req.user._id }).populate(
-      "items.product",
-      "name images"
-    );
+    const orders = await Order.find({ user: req.user._id })
+      .populate("items.product", "name images");
 
     return res.json({ orders });
   } catch (err) {
@@ -92,8 +105,9 @@ export const getMyOrders = async (req, res) => {
   }
 };
 
-
-// GET /api/orders/admin (admin only)
+// ------------------------------------------------------
+// ADMIN GET ALL ORDERS
+// ------------------------------------------------------
 export const getAllOrders = async (req, res) => {
   try {
     const orders = await Order.find()
@@ -106,15 +120,14 @@ export const getAllOrders = async (req, res) => {
   }
 };
 
-
-// PUT /api/orders/:id/status (admin updates status)
-// PUT /api/orders/:id/status
+// ------------------------------------------------------
+// ADMIN UPDATE STATUS
+// ------------------------------------------------------
 export const updateOrderStatus = async (req, res) => {
   try {
     const { status } = req.body;
 
     const allowed = ["pending", "confirmed", "shipping", "completed", "cancelled"];
-
     if (!allowed.includes(status))
       return res.status(400).json({ message: "Invalid status" });
 
@@ -122,15 +135,15 @@ export const updateOrderStatus = async (req, res) => {
       req.params.id,
       { status },
       { new: true }
-    ).populate("user", "email");
+    )
+      .populate("user", "email")
+      .populate("items.product", "name");
 
     if (!order)
       return res.status(404).json({ message: "Order not found" });
 
-    // Gửi notification khi trạng thái thay đổi
-    if (["confirmed", "shipping", "completed", "cancelled"].includes(status)) {
-      await notifyOrderStatusChange(order.user._id, order._id, status);
-    }
+    // Thông báo thay đổi trạng thái
+    await notifyOrderStatusChange(order.user._id, order, status);
 
     return res.json({ order });
   } catch (err) {
