@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
 
-/// =============================================================
-///  COMMON TABLE (DataTable + Phân trang + Hover + No-Sort Header)
-///  - Header chỉ hiển thị, không bấm để sort
-/// =============================================================
 class CommonTable extends StatefulWidget {
-  final List<String> columns;              // Tiêu đề cột
-  final List<List<dynamic>> rows;          // Dữ liệu bảng
-  final List<int> pageSizes;               // Tuỳ chọn số dòng / trang
+  final List<String> columns;
+  final List<List<dynamic>> rows;
+  final List<int> pageSizes;
 
   const CommonTable({
     super.key,
@@ -30,9 +26,6 @@ class _CommonTableState extends State<CommonTable> {
     pageSize = widget.pageSizes.first;
   }
 
-  // =============================================================
-  // PHÂN TRANG
-  // =============================================================
   List<List<dynamic>> get pagedRows {
     final begin = page * pageSize;
     final end = (begin + pageSize).clamp(0, widget.rows.length);
@@ -58,11 +51,10 @@ class _CommonTableState extends State<CommonTable> {
         ],
       ),
       padding: const EdgeInsets.all(16),
+
       child: Column(
         children: [
-          // =============================================================
-          // CHỌN SỐ DÒNG / TRANG
-          // =============================================================
+          // =============== CHỌN SỐ DÒNG / TRANG ===============
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
@@ -88,59 +80,71 @@ class _CommonTableState extends State<CommonTable> {
 
           const SizedBox(height: 10),
 
-          // =============================================================
-          // TABLE
-          // =============================================================
+          // =============== BẢNG + CUỘN DỌC + NGANG ===============
           Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                // 🚫 TẮT SORT — không setup sortColumnIndex hoặc onSort
-                sortColumnIndex: null,
-                sortAscending: true,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final minWidth = constraints.maxWidth; // FULL WIDTH
 
-                headingRowColor: WidgetStateProperty.all(
-                  theme.primary.withOpacity(0.1),
-                ),
-                headingTextStyle: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: theme.primary,
-                ),
+                return Scrollbar(
+                  thumbVisibility: true,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.vertical, // CUỘN DỌC
 
-                // ❌ Không có onSort trong DataColumn
-                columns: widget.columns
-                    .map(
-                      (label) => DataColumn(
-                        label: Text(label),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal, // CUỘN NGANG
+
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minWidth: minWidth,          // full width
+                          maxWidth: double.infinity,   // cho phép rộng nếu có nhiều cột
+                        ),
+
+                        child: DataTable(
+                          columnSpacing: 24,
+                          dataRowMinHeight: 56,
+                          dataRowMaxHeight: 64,
+
+                          headingRowColor:
+                              WidgetStateProperty.all(theme.primary.withOpacity(0.12)),
+                          headingTextStyle: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: theme.primary,
+                            fontSize: 14,
+                          ),
+
+                          columns: widget.columns
+                              .map((label) => DataColumn(label: Text(label)))
+                              .toList(),
+
+                          rows: pagedRows.map((cells) {
+                            return DataRow(
+                              color: WidgetStateProperty.resolveWith((states) {
+                                if (states.contains(WidgetState.hovered)) {
+                                  return Colors.blue.withOpacity(0.05);
+                                }
+                                return Colors.white;
+                              }),
+                              cells: cells.map((cell) {
+                                if (cell is Widget) return DataCell(cell);
+                                return DataCell(
+                                  Text(cell.toString(),
+                                      style: const TextStyle(fontSize: 14)),
+                                );
+                              }).toList(),
+                            );
+                          }).toList(),
+                        ),
                       ),
-                    )
-                    .toList(),
-
-                rows: pagedRows.map((cells) {
-                  return DataRow(
-                    color: WidgetStateProperty.resolveWith((states) {
-                      if (states.contains(WidgetState.hovered)) {
-                        return Colors.blue.withOpacity(0.05);
-                      }
-                      return Colors.white;
-                    }),
-                    cells: cells
-                        .map(
-                          (cell) =>
-                              DataCell(cell is Widget ? cell : Text(cell.toString())),
-                        )
-                        .toList(),
-                  );
-                }).toList(),
-              ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
 
+          // =============== PHÂN TRANG ===============
           const SizedBox(height: 10),
-
-          // =============================================================
-          // THANH PHÂN TRANG
-          // =============================================================
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -148,10 +152,8 @@ class _CommonTableState extends State<CommonTable> {
                 icon: const Icon(Icons.chevron_left),
                 onPressed: page > 0 ? () => setState(() => page--) : null,
               ),
-              Text(
-                "Trang ${page + 1} / $totalPages",
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
+              Text("Trang ${page + 1} / $totalPages",
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
               IconButton(
                 icon: const Icon(Icons.chevron_right),
                 onPressed:

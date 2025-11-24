@@ -1,9 +1,13 @@
+// lib/modules/admin/products/products_page.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../admin_provider.dart';
-import 'product_item_card.dart';
+
+import '../common/common_table.dart';
+import '../common/common_confirm.dart';
+import '../common/common_notify.dart';
+
 import 'product_form_page.dart';
-import 'product_detail_admin.dart';
 
 class ProductsPage extends StatefulWidget {
   const ProductsPage({super.key});
@@ -15,107 +19,107 @@ class ProductsPage extends StatefulWidget {
 class ProductsPageState extends State<ProductsPage> {
   static ProductsPageState? instance;
 
-  List<dynamic> products = [];
-  List<dynamic> originalProducts = []; // ← lưu bản gốc để filter
-  late Future<void> loader;
+  List products = [];
+  List original = [];
+  late Future loader;
 
   @override
   void initState() {
     super.initState();
     instance = this;
-    loader = _loadProducts();
+    loader = load();
   }
 
-  // -----------------------------
-  // LOAD PRODUCTS
-  // -----------------------------
-  Future<void> _loadProducts() async {
+  @override
+  void dispose() {
+    if (instance == this) instance = null;
+    super.dispose();
+  }
+
+  Future<void> load() async {
     final admin = Provider.of<AdminProvider>(context, listen: false);
-    final resp = await admin.api.get("/api/products");
-
+    final res = await admin.api.get("/api/products");
     setState(() {
-      originalProducts = List.from(resp.data["products"]);
-      products = List.from(originalProducts);
+      original = List.from(res.data["products"]);
+      products = List.from(original);
     });
   }
 
-  // -----------------------------
-  // FILTER FOR SEARCH BAR
-  // -----------------------------
-  void filter(String query) {
+  void reload() => setState(() => loader = load());
+
+  void filter(String q) {
+    q = q.toLowerCase().trim();
     setState(() {
-      if (query.isEmpty) {
-        products = List.from(originalProducts);
-      } else {
-        final lower = query.toLowerCase();
-        products = originalProducts.where((p) {
-          final name = (p["name"] ?? "").toString().toLowerCase();
-          return name.contains(lower);
-        }).toList();
-      }
+      products = q.isEmpty ? List.from(original) : original.where((p) {
+        final name = (p["name"] ?? "").toString().toLowerCase();
+        return name.contains(q);
+      }).toList();
     });
   }
 
-  void reload() => setState(() => loader = _loadProducts());
+  String _img(Map p) {
+    final imgs = p["images"];
+    if (imgs is List && imgs.isNotEmpty) {
+      final first = imgs.first;
+      if (first is Map) return first["url"] ?? "";
+      if (first is String) return first;
+    }
+    return "";
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isNarrow = MediaQuery.of(context).size.width < 800;
+    final columns = isNarrow ? ["Ảnh", "Tên", "Hành động"] : ["Ảnh", "Tên", "Danh mục", "Hành động"];
     return Scaffold(
-      appBar: AppBar(title: const Text("Sản phẩm")),
       floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const ProductFormPage()),
-          );
-          reload();
-        },
         child: const Icon(Icons.add),
+        onPressed: () {
+          final admin = Provider.of<AdminProvider>(context, listen: false);
+          admin.openProductForm(); // open form inside admin layout
+        },
       ),
       body: FutureBuilder(
         future: loader,
-        builder: (context, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+        builder: (_, snap) {
+          if (snap.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+          if (products.isEmpty) return const Center(child: Text("Không có sản phẩm"));
 
-          if (products.isEmpty) {
-            return const Center(child: Text("Không có sản phẩm"));
-          }
+          final rows = products.map<List<dynamic>>((p) {
+            final img = _img(p);
+            final category = p["category"] is Map ? p["category"]["name"] : "";
+            final admin = Provider.of<AdminProvider>(context, listen: false);
 
-          return ListView.separated(
-            padding: const EdgeInsets.all(12),
-            itemCount: products.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
-            itemBuilder: (context, i) {
-              final p = products[i];
-              return ProductItemCard(
-                product: p,
-                onEdit: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ProductFormPage(product: p),
-                    ),
-                  );
-                  reload();
-                },
-                onDelete: () async {
-                  final admin =
-                      Provider.of<AdminProvider>(context, listen: false);
-                  await admin.api.delete("/api/products/${p['_id']}");
-                  reload();
-                },
-                onView: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ProductDetailAdmin(productId: p["_id"]),
-                    ),
-                  );
-                },
-              );
-            },
+            final full = [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Image.network(img, width: 48, height: 48, fit: BoxFit.cover, errorBuilder: (_,__,___) => const Icon(Icons.broken_image)),
+              ),
+              p["name"] ?? "",
+              category ?? "",
+              Row(
+                children: [
+                  IconButton(icon: const Icon(Icons.visibility), onPressed: () => admin.openProductDetail(p["_id"])),
+                  IconButton(icon: const Icon(Icons.edit, color: Colors.blue), onPressed: () => admin.openProductForm(p)),
+                  IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () async {
+                    final ok = await showConfirmDialog(context, title: "Xóa sản phẩm?", message: "Bạn có chắc muốn xóa '${p["name"]}' không?", confirmColor: Colors.red, confirmText: "Xóa");
+                    if (!ok) return;
+                    final apiAdmin = Provider.of<AdminProvider>(context, listen: false);
+                    await apiAdmin.api.delete("/api/products/${p['_id']}");
+                    reload();
+                    showSuccess(context, "Đã xóa sản phẩm");
+                  }),
+                ],
+              ),
+            ];
+
+            if (isNarrow) return [full[0], full[1], full[3]];
+            return full;
+          }).toList();
+
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(children: [Expanded(child: CommonTable(columns: columns, rows: rows))]),
           );
         },
       ),
