@@ -1,8 +1,12 @@
+// lib/modules/admin/categories/categories_page.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../admin_provider.dart';
-import 'category_form_page.dart';
+import '../common/common_card.dart';
+import '../common/common_confirm.dart';
+import '../common/common_notify.dart';
+import '../common/common_gap.dart';
 
 class CategoriesPage extends StatefulWidget {
   const CategoriesPage({super.key});
@@ -14,109 +18,189 @@ class CategoriesPage extends StatefulWidget {
 class CategoriesPageState extends State<CategoriesPage> {
   static CategoriesPageState? instance;
 
-  List<dynamic> categories = [];
-  List<dynamic> original = []; // bản gốc
-  late Future<void> loader;
+  List categories = [];
+  List original = [];
+  late Future loader;
 
   @override
   void initState() {
     super.initState();
     instance = this;
-    loader = loadCategories();
+    loader = load();
   }
 
-  Future<void> loadCategories() async {
+  @override
+  void dispose() {
+    if (instance == this) instance = null;
+    super.dispose();
+  }
+
+  // ---------------- LOAD ----------------
+  Future<void> load() async {
     final admin = Provider.of<AdminProvider>(context, listen: false);
     final res = await admin.api.get("/api/category");
 
+    original = List.from(res.data["data"]);
+    categories = List.from(original);
+
+    if (mounted) setState(() {});
+  }
+
+  void reload() {
+    loader = load();
+    setState(() {});
+  }
+
+  // ---------------- FILTER (AdminHomePage gọi) ----------------
+  void filter(String q) {
+    q = q.trim().toLowerCase();
     setState(() {
-      original = List.from(res.data["data"]);
-      categories = List.from(original);
+      categories = q.isEmpty
+          ? List.from(original)
+          : original.where((c) {
+              final name = c["name"].toString().toLowerCase();
+              return name.contains(q);
+            }).toList();
     });
   }
 
-  // FILTER SEARCH
-  void filter(String query) {
-    setState(() {
-      if (query.isEmpty) {
-        categories = List.from(original);
+  // ---------------- POPUP FORM + CONFIRM ----------------
+  Future<void> openForm({Map<String, dynamic>? item}) async {
+    final nameCtrl = TextEditingController(text: item?["name"] ?? "");
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(item == null ? "Tạo danh mục" : "Cập nhật danh mục"),
+        content: TextField(
+          controller: nameCtrl,
+          decoration: const InputDecoration(labelText: "Tên danh mục"),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Hủy")),
+          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text("Lưu")),
+        ],
+      ),
+    );
+
+    if (ok != true) return;
+
+    // Xác nhận lưu
+    final confirm = await showConfirmDialog(
+      context,
+      title: item == null ? "Tạo danh mục mới?" : "Cập nhật danh mục?",
+      message: "Bạn muốn lưu thay đổi?",
+      confirmText: "Lưu",
+      confirmColor: Colors.green,
+    );
+
+    if (!confirm) return;
+
+    try {
+      final admin = Provider.of<AdminProvider>(context, listen: false);
+      final body = {"name": nameCtrl.text.trim()};
+
+      if (item == null) {
+        await admin.api.post("/api/category", data: body);
+        showSuccess(context, "Đã thêm danh mục");
       } else {
-        final lower = query.toLowerCase();
-        categories = original.where((c) {
-          final name = (c["name"] ?? "").toString().toLowerCase();
-          final slug = (c["slug"] ?? "").toString().toLowerCase();
-          return name.contains(lower) || slug.contains(lower);
-        }).toList();
+        await admin.api.put("/api/category/${item["_id"]}", data: body);
+        showSuccess(context, "Đã cập nhật danh mục");
       }
-    });
+
+      reload();
+    } catch (e) {
+      showError(context, "Lỗi: $e");
+    }
   }
 
-  void reload() => setState(() => loader = loadCategories());
+  // ---------------- UI: CARD GRID ----------------
+  Widget buildCards() {
+    final width = MediaQuery.of(context).size.width;
 
+    // Tự động chọn số card / hàng
+    int cross = 1;
+    if (width >= 900) cross = 3;      // Desktop
+    else if (width >= 600) cross = 2; // Tablet
+
+    return GridView.builder(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: cross,
+        childAspectRatio: 3.2,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+      ),
+      itemCount: categories.length,
+      itemBuilder: (_, i) {
+        final c = categories[i];
+
+        return CommonCard(
+          color: const Color.fromARGB(255, 226, 226, 226),
+          child: Row(
+            children: [
+              const Icon(Icons.folder, size: 30, color: Color.fromARGB(255, 254, 221, 129)),
+              G.w12,
+              Expanded(
+                child: Text(
+                  c["name"],
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.edit, color: Colors.blue),
+                onPressed: () => openForm(item: c),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete, color: Colors.red),
+                onPressed: () async {
+                  final ok = await showConfirmDialog(
+                    context,
+                    title: "Xóa danh mục?",
+                    message: "Bạn có chắc muốn xóa '${c["name"]}'?",
+                    confirmColor: Colors.red,
+                    confirmText: "Xóa",
+                  );
+
+                  if (!ok) return;
+
+                  try {
+                    final admin = Provider.of<AdminProvider>(context, listen: false);
+                    await admin.api.delete("/api/category/${c["_id"]}");
+                    showSuccess(context, "Đã xóa danh mục");
+                    reload();
+                  } catch (e) {
+                    showError(context, "Lỗi: $e");
+                  }
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ---------------- BUILD ----------------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Danh mục")),
       floatingActionButton: FloatingActionButton(
+        onPressed: () => openForm(),
         child: const Icon(Icons.add),
-        onPressed: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const CategoryFormPage()),
-          );
-          reload();
-        },
       ),
       body: FutureBuilder(
         future: loader,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+        builder: (_, snap) {
+          if (snap.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-
           if (categories.isEmpty) {
             return const Center(child: Text("Không có danh mục"));
           }
 
-          return ListView.builder(
-            itemCount: categories.length,
-            itemBuilder: (_, index) {
-              final c = categories[index];
-
-              return ListTile(
-                leading: const Icon(Icons.folder),
-                title: Text(c["name"]),
-                subtitle: Text(c["slug"]),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit),
-                      onPressed: () async {
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => CategoryFormPage(category: c),
-                          ),
-                        );
-                        reload();
-                      },
-                    ),
-
-                    IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () async {
-                        final admin = Provider.of<AdminProvider>(
-                            context,
-                            listen: false);
-                        await admin.api.delete("/api/category/${c['_id']}");
-                        reload();
-                      },
-                    ),
-                  ],
-                ),
-              );
-            },
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: buildCards(),
           );
         },
       ),

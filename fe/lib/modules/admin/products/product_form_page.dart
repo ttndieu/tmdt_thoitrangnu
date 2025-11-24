@@ -6,6 +6,14 @@ import 'package:provider/provider.dart';
 import 'package:dio/dio.dart';
 
 import '../admin_provider.dart';
+
+// common
+import '../common/common_section.dart';
+import '../common/common_card.dart';
+import '../common/common_gap.dart';
+import '../common/common_confirm.dart';
+import '../common/common_notify.dart';
+
 import 'components/image_manager.dart';
 import 'components/variant_table.dart';
 import 'components/variant_editor_dialog.dart';
@@ -21,43 +29,35 @@ class ProductFormPage extends StatefulWidget {
 
 class _ProductFormPageState extends State<ProductFormPage> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _name = TextEditingController();
-  final TextEditingController _description = TextEditingController();
+  final _name = TextEditingController();
+  final _description = TextEditingController();
 
   String? _selectedCategorySlug;
-  List<Map<String, dynamic>> _images = []; // {url, public_id}
-  List<Map<String, dynamic>> _variants = []; // {size,color,stock,price,_id?}
+  List<Map<String, dynamic>> _images = [];
+  List<Map<String, dynamic>> _variants = [];
 
   bool _loading = false;
 
   @override
   void initState() {
     super.initState();
+
     if (widget.product != null) {
       final p = widget.product!;
       _name.text = p["name"] ?? "";
       _description.text = p["description"] ?? "";
 
-      // Category may be object
       final c = p["category"];
-      if (c is Map && c.containsKey("slug")) {
-        _selectedCategorySlug = c["slug"];
-      } else if (p["category"] is String) {
-        _selectedCategorySlug = p["category"];
-      }
+      if (c is Map && c.containsKey("slug")) _selectedCategorySlug = c["slug"];
+      else if (c is String) _selectedCategorySlug = c;
 
-      // images could be List<String> (old) or List<Map>
       final imgs = p["images"];
       if (imgs is List) {
         for (var v in imgs) {
-          if (v is String) {
+          if (v is String)
             _images.add({"url": v, "public_id": ""});
-          } else if (v is Map) {
-            _images.add({
-              "url": v["url"] ?? "",
-              "public_id": v["public_id"] ?? "",
-            });
-          }
+          else if (v is Map)
+            _images.add({"url": v["url"], "public_id": v["public_id"]});
         }
       }
 
@@ -77,6 +77,9 @@ class _ProductFormPageState extends State<ProductFormPage> {
     super.dispose();
   }
 
+  // ---------------------------------------------------------
+  // UPLOAD ẢNH (không confirm, không notify)
+  // ---------------------------------------------------------
   Future<void> _pickAndUploadImage(AdminProvider admin) async {
     final picker = ImagePicker();
     final XFile? picked = await picker.pickImage(source: ImageSource.gallery);
@@ -84,208 +87,245 @@ class _ProductFormPageState extends State<ProductFormPage> {
 
     setState(() => _loading = true);
     try {
-      final dio = admin.api.dio;
-      final String filename = picked.name;
+      MultipartFile f = kIsWeb
+          ? MultipartFile.fromBytes(await picked.readAsBytes(), filename: picked.name)
+          : await MultipartFile.fromFile(picked.path, filename: picked.name);
 
-      MultipartFile m;
-      if (kIsWeb) {
-        final bytes = await picked.readAsBytes();
-        m = MultipartFile.fromBytes(bytes, filename: filename);
-      } else {
-        m = await MultipartFile.fromFile(picked.path, filename: filename);
-      }
+      final resp = await admin.api.dio.post(
+        "/api/upload",
+        data: FormData.fromMap({
+          "image": f,
+          "categorySlug": _selectedCategorySlug ?? "",
+        }),
+      );
 
-      final form = FormData.fromMap({
-        "image": m,
-        "categorySlug": _selectedCategorySlug ?? "",
-      });
-
-      final resp = await dio.post("/api/upload", data: form);
-      final data = resp.data;
-      if (data != null && data is Map) {
+      final d = resp.data;
+      if (d is Map) {
         setState(() {
-          _images.add({
-            "url": data["url"] ?? "",
-            "public_id": data["public_id"] ?? "",
-          });
+          _images.add({"url": d["url"], "public_id": d["public_id"]});
         });
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("Upload lỗi: $e")));
     } finally {
-      if (mounted) setState(() => _loading = false);
+      setState(() => _loading = false);
     }
   }
 
-  Future<void> _deleteImage(AdminProvider admin, int index) async {
-    final publicId = _images[index]["public_id"];
-    if (publicId == null || publicId == "") {
-      // nếu ko có public_id chỉ remove local
-      setState(() => _images.removeAt(index));
-      return;
+  // Không confirm delete ảnh
+  Future<void> _deleteImage(AdminProvider admin, int i) async {
+    final publicId = _images[i]["public_id"];
+    if (publicId != null && publicId != "") {
+      await admin.api.dio.delete("/api/upload/${Uri.encodeComponent(publicId)}");
     }
-
-    setState(() => _loading = true);
-    try {
-      final encoded = Uri.encodeComponent(publicId);
-      // call backend DELETE /api/upload/:public_id
-      await admin.api.dio.delete("/api/upload/$encoded");
-      if (mounted) setState(() => _images.removeAt(index));
-    } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("Xoá ảnh lỗi: $e")));
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
+    setState(() => _images.removeAt(i));
   }
 
-  Future<void> _replaceImage(AdminProvider admin, int index) async {
+  // Không confirm replace
+  Future<void> _replaceImage(AdminProvider admin, int i) async {
     final picker = ImagePicker();
     final XFile? picked = await picker.pickImage(source: ImageSource.gallery);
     if (picked == null) return;
 
     setState(() => _loading = true);
     try {
-      final dio = admin.api.dio;
-      final String filename = picked.name;
-      MultipartFile m;
-      if (kIsWeb) {
-        final bytes = await picked.readAsBytes();
-        m = MultipartFile.fromBytes(bytes, filename: filename);
-      } else {
-        m = await MultipartFile.fromFile(picked.path, filename: filename);
-      }
+      MultipartFile f = kIsWeb
+          ? MultipartFile.fromBytes(await picked.readAsBytes(), filename: picked.name)
+          : await MultipartFile.fromFile(picked.path, filename: picked.name);
 
-      final form = FormData.fromMap({
-        "image": m,
-        "old_public_id": _images[index]["public_id"] ?? "",
-        "categorySlug": _selectedCategorySlug ?? "",
-      });
+      final resp = await admin.api.dio.put(
+        "/api/upload/replace",
+        data: FormData.fromMap({
+          "image": f,
+          "old_public_id": _images[i]["public_id"],
+          "categorySlug": _selectedCategorySlug ?? "",
+        }),
+      );
 
-      final resp = await dio.put("/api/upload/replace", data: form);
-      final data = resp.data;
-      if (data != null && data is Map) {
+      final d = resp.data;
+      if (d is Map) {
         setState(() {
-          _images[index] = {
-            "url": data["new_url"] ?? "",
-            "public_id": data["new_public_id"] ?? "",
-          };
+          _images[i] = {"url": d["new_url"], "public_id": d["new_public_id"]};
         });
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("Replace lỗi: $e")));
     } finally {
-      if (mounted) setState(() => _loading = false);
+      setState(() => _loading = false);
     }
   }
 
-  Future<void> _openVariantEditor({Map<String, dynamic>? variant, int? index}) async {
-    final result = await VariantEditorDialog.show(context, variant: variant);
-    if (result != null) {
-      setState(() {
-        if (index == null) _variants.add(result);
-        else _variants[index] = {..._variants[index], ...result};
-      });
-    }
+  // ---------------------------------------------------------
+  // VARIANT (không notify)
+  // ---------------------------------------------------------
+  Future<void> _openVariantEditor({Map<String, dynamic>? v, int? idx}) async {
+    final r = await VariantEditorDialog.show(context, variant: v);
+    if (r == null) return;
+    setState(() {
+      if (idx == null)
+        _variants.add(r);
+      else
+        _variants[idx] = {..._variants[idx], ...r};
+    });
   }
 
+  Future<void> _deleteVariant(int i) async {
+    setState(() => _variants.removeAt(i));
+  }
+
+  // ---------------------------------------------------------
+  // LƯU SẢN PHẨM (có confirm + notify)
+  // ---------------------------------------------------------
   Future<void> _submit(AdminProvider admin) async {
     if (!_formKey.currentState!.validate()) return;
 
+    final ok = await showConfirmDialog(
+      context,
+      title: widget.product == null ? "Tạo sản phẩm mới?" : "Cập nhật sản phẩm?",
+      message: "Xác nhận lưu thay đổi?",
+      confirmColor: Colors.green,
+      confirmText: "Lưu",
+    );
+    if (!ok) return;
+
     setState(() => _loading = true);
+
     try {
       final payload = {
         "name": _name.text.trim(),
         "description": _description.text.trim(),
         "category": _selectedCategorySlug,
-        "images": _images, // array of {url, public_id}
+        "images": _images,
         "variants": _variants,
       };
 
       if (widget.product == null) {
         await admin.api.post("/api/products", data: payload);
+        showSuccess(context, "Tạo sản phẩm thành công");
       } else {
-        await admin.api.put("/api/products/${widget.product!['_id']}", data: payload);
+        await admin.api.put("/api/products/${widget.product!["_id"]}", data: payload);
+        showSuccess(context, "Cập nhật sản phẩm thành công");
       }
 
-      if (mounted) Navigator.pop(context);
+      admin.backToProducts();
     } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("Lỗi lưu sản phẩm: $e")));
+      showError(context, "Lỗi lưu sản phẩm: $e");
     } finally {
-      if (mounted) setState(() => _loading = false);
+      setState(() => _loading = false);
     }
   }
 
+  // ---------------------------------------------------------
+  // UI
+  // ---------------------------------------------------------
   @override
   Widget build(BuildContext context) {
     final admin = Provider.of<AdminProvider>(context, listen: false);
 
-    return Scaffold(
-      appBar: AppBar(title: Text(widget.product == null ? "Tạo sản phẩm" : "Sửa sản phẩm")),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: FutureBuilder(
-          future: admin.api.get("/api/category"),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-            if (snapshot.hasError) return Center(child: Text("Lỗi tải danh mục: ${snapshot.error}"));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(children: [
+          IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => admin.backToProducts()),
+          const SizedBox(width: 8),
+          Text(
+            widget.product == null ? "Tạo sản phẩm" : "Cập nhật sản phẩm",
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+        ]),
 
-            List categories = [];
-            final data = snapshot.data?.data;
-            if (data is Map && data.containsKey("categories")) categories = data["categories"];
-            else if (data is Map && data.containsKey("data")) categories = data["data"];
-            else if (data is List) categories = data;
+        const SizedBox(height: 12),
 
-            return Form(
-              key: _formKey,
-              child: ListView(
-                children: [
-                  TextFormField(
-                    controller: _name,
-                    decoration: const InputDecoration(labelText: "Tên sản phẩm"),
-                    validator: (v) => v == null || v.trim().isEmpty ? "Không được để trống" : null,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _description,
-                    decoration: const InputDecoration(labelText: "Mô tả"),
-                    maxLines: 3,
-                  ),
-                  const SizedBox(height: 12),
-                  CategoryDropdown(
-                    categories: categories,
-                    value: _selectedCategorySlug,
-                    onChanged: (v) => setState(() => _selectedCategorySlug = v),
-                  ),
-                  const SizedBox(height: 16),
-                  ImageManager(
-                    images: _images,
-                    onPick: () => _pickAndUploadImage(admin),
-                    onDelete: (i) => _deleteImage(admin, i),
-                    onReplace: (i) => _replaceImage(admin, i),
-                    loading: _loading,
-                  ),
-                  const SizedBox(height: 16),
-                  VariantTable(
-                    variants: _variants,
-                    onAdd: () => _openVariantEditor(),
-                    onEdit: (i) => _openVariantEditor(variant: _variants[i], index: i),
-                    onDelete: (i) => setState(() => _variants.removeAt(i)),
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: _loading ? null : () => _submit(admin),
-                    child: _loading ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : Text(widget.product == null ? "Tạo" : "Cập nhật"),
-                  )
-                ],
-              ),
-            );
-          },
+        Expanded(
+          child: FutureBuilder(
+            future: admin.api.get("/api/category"),
+            builder: (context, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snap.hasError) {
+                return Center(child: Text("Lỗi tải danh mục: ${snap.error}"));
+              }
+
+              List categories = [];
+              final d = snap.data?.data;
+              if (d is Map && d["categories"] is List) categories = d["categories"];
+              else if (d is Map && d["data"] is List) categories = d["data"];
+              else if (d is List) categories = d;
+
+              return Form(
+                key: _formKey,
+                child: ListView(
+                  padding: const EdgeInsets.all(8),
+                  children: [
+                    // Thông tin sản phẩm
+                    CommonCard(
+                      child: CommonSection(
+                        title: "Thông tin sản phẩm",
+                        child: Column(children: [
+                          TextFormField(
+                            controller: _name,
+                            decoration: const InputDecoration(labelText: "Tên sản phẩm"),
+                            validator: (v) => v == null || v.trim().isEmpty ? "Không được để trống" : null,
+                          ),
+                          G.h12,
+                          TextFormField(
+                            controller: _description,
+                            decoration: const InputDecoration(labelText: "Mô tả"),
+                            maxLines: 3,
+                          ),
+                          G.h16,
+                          CategoryDropdown(
+                            categories: categories,
+                            value: _selectedCategorySlug,
+                            onChanged: (v) => setState(() => _selectedCategorySlug = v),
+                          ),
+                        ]),
+                      ),
+                    ),
+
+                    // Ảnh sản phẩm
+                    CommonCard(
+                      child: CommonSection(
+                        title: "Ảnh sản phẩm",
+                        child: ImageManager(
+                          images: _images,
+                          loading: _loading,
+                          onPick: () => _pickAndUploadImage(admin),
+                          onDelete: (i) => _deleteImage(admin, i),
+                          onReplace: (i) => _replaceImage(admin, i),
+                        ),
+                      ),
+                    ),
+
+                    // Variants
+                    CommonCard(
+                      child: CommonSection(
+                        title: "Variants",
+                        child: VariantTable(
+                          variants: _variants,
+                          onAdd: () => _openVariantEditor(),
+                          onEdit: (i) => _openVariantEditor(v: _variants[i], idx: i),
+                          onDelete: _deleteVariant,
+                        ),
+                      ),
+                    ),
+
+                    G.h20,
+
+                    // Nút lưu
+                    SizedBox(
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: _loading ? null : () => _submit(admin),
+                        child: _loading
+                            ? const CircularProgressIndicator(color: Colors.white)
+                            : Text(widget.product == null ? "Tạo sản phẩm" : "Cập nhật"),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
         ),
-      ),
+      ],
     );
   }
 }

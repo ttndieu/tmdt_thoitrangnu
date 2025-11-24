@@ -1,4 +1,4 @@
-// lib/providers/admin_provider.dart
+// lib/modules/admin/admin_provider.dart
 import 'package:flutter/material.dart';
 import '../../core/network/api_client.dart';
 import '../../modules/auth/providers/auth_provider.dart';
@@ -10,37 +10,58 @@ class AdminProvider with ChangeNotifier {
 
   AdminProvider(this.auth, this.api);
 
-  /// Route hiện tại trong admin
   String _currentRoute = AdminRoutes.dashboard;
   String get currentRoute => _currentRoute;
 
-  /// Kiểm tra quyền admin
   bool get isAdmin => auth.user?.role == "admin";
-
-  /// Lấy token khi cần
   String? get token => auth.user?.token;
 
-  /// Đổi màn khi nhấn sidebar
-  void changeRoute(String route) {
-    _currentRoute = route;
+  // PRODUCT DETAIL / FORM SUPPORT
+  String? selectedProductId;
+  String? editingProductId;
+  Map<String, dynamic>? editingProductData;
+
+  void openProductDetail(String id) {
+    selectedProductId = id;
+    _currentRoute = AdminRoutes.productDetail;
     notifyListeners();
   }
 
-  /// ĐĂNG XUẤT HOÀN TOÀN – XÓA USER + ĐẨY VỀ LOGIN
-  Future<void> logout(BuildContext context) async {
-    // 1. Xóa user khỏi AuthProvider
-    await auth.logout(); // giả sử AuthProvider có hàm logout()
-
-    // 2. Reset route admin
-    _currentRoute = AdminRoutes.dashboard;
-
-    // 3. Thông báo UI
+  void openProductForm([Map<String, dynamic>? product]) {
+    editingProductData = product;
+    editingProductId = product?['_id'];
+    _currentRoute = AdminRoutes.productForm;
     notifyListeners();
+  }
 
-    // 4. Đẩy về trang login (thay '/login' bằng route thật của bạn)
+  void backToProducts() {
+    selectedProductId = null;
+    editingProductId = null;
+    editingProductData = null;
+    _currentRoute = AdminRoutes.products;
+    notifyListeners();
+  }
+
+  void changeRoute(String route) {
+    _currentRoute = route;
+    // reset editing when leaving form/detail
+    if (route != AdminRoutes.productDetail) selectedProductId = null;
+    if (route != AdminRoutes.productForm) {
+      editingProductId = null;
+      editingProductData = null;
+    }
+    notifyListeners();
+  }
+
+  Future<void> logout(BuildContext context) async {
+    await auth.logout();
+    _currentRoute = AdminRoutes.dashboard;
+    selectedProductId = null;
+    editingProductId = null;
+    editingProductData = null;
+    notifyListeners();
     if (context.mounted) {
-      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-      // Nếu dùng GoRouter thì dùng: context.go('/login');
+      Navigator.of(context).pushNamedAndRemoveUntil('/login', (r) => false);
     }
   }
 }

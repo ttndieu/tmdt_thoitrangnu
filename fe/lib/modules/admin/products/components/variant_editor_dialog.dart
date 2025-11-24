@@ -2,7 +2,11 @@
 import 'package:flutter/material.dart';
 
 class VariantEditorDialog {
-  static Future<Map<String, dynamic>?> show(BuildContext context, {Map<String, dynamic>? variant}) {
+  static Future<Map<String, dynamic>?> show(
+    BuildContext context, {
+    Map<String, dynamic>? variant,
+  }) {
+    final sizeCtrl = TextEditingController(text: variant?['size'] ?? '');
     final colorCtrl = TextEditingController(text: variant?['color'] ?? '');
     final stockCtrl = TextEditingController(text: variant?['stock']?.toString() ?? '0');
     final priceCtrl = TextEditingController(text: variant?['price']?.toString() ?? '0');
@@ -11,20 +15,53 @@ class VariantEditorDialog {
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          title: Text(variant == null ? 'Thêm variant' : 'Sửa variant'),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          title: Text(
+            variant == null ? 'Thêm biến thể' : 'Sửa biến thể',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: colorCtrl, decoration: const InputDecoration(labelText: 'Color')),
-              TextField(controller: stockCtrl, decoration: const InputDecoration(labelText: 'Stock'), keyboardType: TextInputType.number),
-              TextField(controller: priceCtrl, decoration: const InputDecoration(labelText: 'Price'), keyboardType: TextInputType.number),
+              // SIZE
+              TextField(
+                controller: sizeCtrl,
+                decoration: const InputDecoration(labelText: 'Size'),
+              ),
+              const SizedBox(height: 8),
+
+              // COLOR
+              TextField(
+                controller: colorCtrl,
+                decoration: const InputDecoration(labelText: 'Color'),
+              ),
+              const SizedBox(height: 8),
+
+              // STOCK
+              TextField(
+                controller: stockCtrl,
+                decoration: const InputDecoration(labelText: 'Stock'),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 8),
+
+              // PRICE
+              TextField(
+                controller: priceCtrl,
+                decoration: const InputDecoration(labelText: 'Price'),
+                keyboardType: TextInputType.number,
+              ),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Hủy'),
+            ),
             ElevatedButton(
               onPressed: () {
                 final result = {
+                  'size': sizeCtrl.text.trim(),
                   'color': colorCtrl.text.trim(),
                   'stock': int.tryParse(stockCtrl.text.trim()) ?? 0,
                   'price': int.tryParse(priceCtrl.text.trim()) ?? 0,
