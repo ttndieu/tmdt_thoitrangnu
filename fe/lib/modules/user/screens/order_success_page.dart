@@ -20,13 +20,14 @@ class OrderSuccessPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              Expanded(
+        child: Column(
+          children: [
+            /// ----------- VÙNG CUỘN -----------
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     // Success Icon
                     Container(
@@ -132,12 +133,17 @@ class OrderSuccessPage extends StatelessWidget {
                         ],
                       ),
                     ),
+
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
+            ),
 
-              // Action Buttons
-              Column(
+            /// ----------- NÚT DƯỚI CÙNG (KHÔNG CUỘN) -----------
+            Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
                 children: [
                   SizedBox(
                     width: double.infinity,
@@ -167,7 +173,9 @@ class OrderSuccessPage extends StatelessWidget {
                       ),
                     ),
                   ),
+
                   const SizedBox(height: 12),
+
                   SizedBox(
                     width: double.infinity,
                     height: 52,
@@ -175,7 +183,8 @@ class OrderSuccessPage extends StatelessWidget {
                       onPressed: () {
                         Navigator.pushAndRemoveUntil(
                           context,
-                          MaterialPageRoute(builder: (_) => const OrdersPage()),
+                          MaterialPageRoute(
+                              builder: (_) => const OrdersPage()),
                           (route) => route.isFirst,
                         );
                       },
@@ -195,7 +204,9 @@ class OrderSuccessPage extends StatelessWidget {
                       ),
                     ),
                   ),
+
                   const SizedBox(height: 12),
+
                   TextButton(
                     onPressed: () {
                       Navigator.popUntil(context, (route) => route.isFirst);
@@ -210,8 +221,8 @@ class OrderSuccessPage extends StatelessWidget {
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

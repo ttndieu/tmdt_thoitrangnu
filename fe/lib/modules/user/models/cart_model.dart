@@ -7,6 +7,7 @@ class CartItemModel {
   final String size;
   final String color;
   final ProductInfoCart product;
+  final bool selected;
 
   CartItemModel({
     required this.id,
@@ -15,6 +16,7 @@ class CartItemModel {
     required this.size,
     required this.color,
     required this.product,
+    this.selected = true,
   });
 
   factory CartItemModel.fromJson(Map<String, dynamic> json) {
@@ -25,6 +27,7 @@ class CartItemModel {
       size: json['size'] ?? '',
       color: json['color'] ?? '',
       product: ProductInfoCart.fromJson(json['product'] ?? {}),
+      selected: json['selected'] ?? true,
     );
   }
 
@@ -34,6 +37,7 @@ class CartItemModel {
       'size': size,
       'color': color,
       'quantity': quantity,
+      'selected': selected,
     };
   }
 
@@ -54,7 +58,10 @@ class CartItemModel {
 
   double get subtotal => price * quantity;
 
-  CartItemModel copyWith({int? quantity}) {
+  CartItemModel copyWith({
+    int? quantity,
+    bool? selected,
+  }) {
     return CartItemModel(
       id: id,
       productId: productId,
@@ -62,6 +69,7 @@ class CartItemModel {
       size: size,
       color: color,
       product: product,
+      selected: selected ?? this.selected,
     );
   }
 }

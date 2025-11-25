@@ -16,11 +16,57 @@ class CartProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   
+  // ✅ Tổng số lượng items (tất cả)
   int get itemCount => _items.fold(0, (sum, item) => sum + item.quantity);
-  double get totalAmount => _items.fold(0, (sum, item) => sum + item.subtotal);
+  
+  // ✅ Tổng tiền CHỈ của items được chọn
+  double get totalAmount => _items
+      .where((item) => item.selected)
+      .fold(0, (sum, item) => sum + item.subtotal);
+  
+  // ✅ Danh sách items được chọn
+  List<CartItemModel> get selectedItems =>
+      _items.where((item) => item.selected).toList();
+  
+  // ✅ Số lượng items được chọn
+  int get selectedCount => selectedItems.length;
+  
+  // ✅ Check xem tất cả items có được chọn không
+  bool get isAllSelected {
+    if (_items.isEmpty) return false;
+    return _items.every((item) => item.selected);
+  }
   
   bool get isEmpty => _items.isEmpty;
   bool get isNotEmpty => _items.isNotEmpty;
+
+  // ✅ Toggle selected cho 1 item (LOCAL ONLY)
+  void toggleItemSelection(String productId, String size, String color) {
+    final index = _items.indexWhere(
+      (item) =>
+          item.productId == productId &&
+          item.size == size &&
+          item.color == color,
+    );
+
+    if (index != -1) {
+      _items[index] = _items[index].copyWith(
+        selected: !_items[index].selected,
+      );
+      notifyListeners();
+    }
+  }
+
+  // ✅ Chọn tất cả / Bỏ chọn tất cả (LOCAL ONLY)
+  void toggleSelectAll() {
+    final shouldSelectAll = !isAllSelected;
+    
+    _items = _items.map((item) {
+      return item.copyWith(selected: shouldSelectAll);
+    }).toList();
+    
+    notifyListeners();
+  }
 
   // Fetch cart from server
   Future<void> fetchCart() async {

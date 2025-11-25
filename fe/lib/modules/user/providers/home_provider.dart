@@ -28,9 +28,24 @@ class HomeProvider with ChangeNotifier {
   String? get selectedCategorySlug => _selectedCategorySlug;
   String get searchQuery => _searchQuery;
 
-  // Featured products (3 đầu tiên)
-  List<ProductModel> get featuredProducts =>
-      _products.take(3).toList();
+ // Featured products (Top 5 bán chạy nhất)
+ List<ProductModel> get featuredProducts {
+  if (_products.isEmpty) return [];
+  
+  // Sort theo số lượng đã bán (giảm dần)
+  final sorted = List<ProductModel>.from(_products);
+  sorted.sort((a, b) => b.sold.compareTo(a.sold));
+
+    // THÊM DEBUG LOG
+  print('📊 === FEATURED PRODUCTS DEBUG ===');
+  for (var i = 0; i < (sorted.length > 5 ? 5 : sorted.length); i++) {
+    print('${i + 1}. ${sorted[i].name} - Sold: ${sorted[i].sold}');
+  }
+  print('====================================');
+  
+  // Lấy 5 sản phẩm đầu tiên
+  return sorted.take(5).toList();
+  }
 
   // Fetch categories
   Future<void> fetchCategories() async {

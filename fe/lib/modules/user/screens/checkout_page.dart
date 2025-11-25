@@ -47,7 +47,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
   }
 
   double _calculateTotal(CartProvider cartProvider) {
-    return cartProvider.items.fold(0.0, (sum, item) => sum + item.subtotal);
+  // CHỈ TÍNH ITEMS ĐƯỢC CHỌN
+  return cartProvider.selectedItems.fold(0.0, (sum, item) => sum + item.subtotal);
   }
 
   // ✅ SHOW VOUCHER SHEET
@@ -288,13 +289,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
               const Icon(Icons.shopping_bag, color: AppColors.primary),
               const SizedBox(width: 8),
               Text(
-                'Sản phẩm (${cartProvider.itemCount})',
+                'Sản phẩm (${cartProvider.selectedCount})',
                 style: AppTextStyles.h3,
               ),
             ],
           ),
           const Divider(height: 20),
-          ...cartProvider.items.map((item) {
+          ...cartProvider.selectedItems.map((item) {
             final imageUrl = item.product.imageUrl;
 
             return Padding(
@@ -600,7 +601,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
             const SizedBox(width: 16),
             Expanded(
               child: ElevatedButton(
-                onPressed: _isProcessing ? null : _placeOrder,
+                onPressed: (_isProcessing || cartProvider.selectedCount == 0) ? null : _placeOrder,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   padding: const EdgeInsets.symmetric(vertical: 16),
@@ -644,18 +645,37 @@ class _CheckoutPageState extends State<CheckoutPage> {
       return;
     }
 
+    // Kiểm tra có sản phẩm được chọn không
+    final cartProvider = context.read<CartProvider>();
+    if (cartProvider.selectedCount == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('❌ Vui lòng chọn ít nhất 1 sản phẩm'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isProcessing = true);
 
     try {
+      final selectedItemIds = cartProvider.selectedItems
+      .map((item) => item.id)  // Lấy ID của từng item
+      .toList();
+      
+      print('🛒 Selected item IDs to order: $selectedItemIds');
+
       // ✅ FIX: Đổi createOrder → createOrderFromCart
       final order = await context.read<OrderProvider>().createOrderFromCart(
             paymentMethod: _paymentMethod,
             shippingAddress: _selectedAddress!.toJson(),
-            voucherId: _selectedVoucher?.id,  // ✅ SEND VOUCHER ID
+            voucherId: _selectedVoucher?.id,
+            selectedItemIds: selectedItemIds,
           );
 
       if (order != null && mounted) {
-        await context.read<CartProvider>().clearCart();
+        await context.read<CartProvider>().fetchCart();
         context.read<VoucherProvider>().removeVoucher();
 
         Navigator.pushReplacement(

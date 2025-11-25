@@ -17,7 +17,29 @@ class CartPage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppColors.surface,
         elevation: 0,
-        title: const Text('Giỏ hàng', style: AppTextStyles.h2),
+        title: Consumer<CartProvider>(
+          builder: (context, cartProvider, _) {
+            return Text(
+              'Giỏ hàng (${cartProvider.selectedCount}/${cartProvider.itemCount})',
+              style: AppTextStyles.h2,
+            );
+          },
+        ),
+        actions: [
+          Consumer<CartProvider>(
+            builder: (context, cartProvider, _) {
+              if (cartProvider.items.isEmpty) return const SizedBox();
+              
+              return TextButton(
+                onPressed: () => cartProvider.toggleSelectAll(),
+                child: Text(
+                  cartProvider.isAllSelected ? 'Bỏ chọn' : 'Chọn tất cả',
+                  style: TextStyle(color: AppColors.primary),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: Consumer<CartProvider>(
         builder: (context, cartProvider, _) {
@@ -33,8 +55,6 @@ class CartPage extends StatelessWidget {
                   itemCount: cartProvider.items.length,
                   itemBuilder: (context, index) {
                     final item = cartProvider.items[index];
-                    
-                    // ✅ FIX: Dùng item.product.imageUrl
                     final imageUrl = item.product.imageUrl;
 
                     return Container(
@@ -42,35 +62,60 @@ class CartPage extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: AppColors.surface,
                         borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: item.selected
+                              ? AppColors.primary.withOpacity(0.3)
+                              : Colors.transparent,
+                          width: 2,
+                        ),
                       ),
                       child: Padding(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(10),
                         child: Row(
                           children: [
-                            // Product Image
+                            // ✅ CHECKBOX - Compact
+                            Transform.scale(
+                              scale: 0.85,
+                              child: Checkbox(
+                                value: item.selected,
+                                onChanged: (value) {
+                                  cartProvider.toggleItemSelection(
+                                    item.productId,
+                                    item.size,
+                                    item.color,
+                                  );
+                                },
+                                activeColor: AppColors.primary,
+                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+
+                            // ✅ Product Image - Giảm size
                             ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(10),
                               child: imageUrl.isNotEmpty
                                   ? Image.network(
                                       imageUrl,
-                                      width: 80,
-                                      height: 80,
+                                      width: 70,
+                                      height: 70,
                                       fit: BoxFit.cover,
                                       errorBuilder: (_, __, ___) => Container(
-                                        width: 80,
-                                        height: 80,
+                                        width: 70,
+                                        height: 70,
                                         color: AppColors.background,
-                                        child: const Icon(Icons.image),
+                                        child: const Icon(Icons.image, size: 30),
                                       ),
                                     )
                                   : Container(
-                                      width: 80,
-                                      height: 80,
+                                      width: 70,
+                                      height: 70,
                                       color: AppColors.background,
-                                      child: const Icon(Icons.image),
+                                      child: const Icon(Icons.image, size: 30),
                                     ),
                             ),
-                            const SizedBox(width: 12),
+                            const SizedBox(width: 8),
 
                             // Product Info
                             Expanded(
@@ -81,18 +126,21 @@ class CartPage extends StatelessWidget {
                                     item.product.name,
                                     style: AppTextStyles.bodyMedium.copyWith(
                                       fontWeight: FontWeight.w600,
+                                      fontSize: 14,
                                     ),
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  const SizedBox(height: 4),
+                                  const SizedBox(height: 3),
                                   Text(
                                     '${item.size} - ${item.color}',
                                     style: AppTextStyles.bodySmall.copyWith(
                                       color: AppColors.textSecondary,
+                                      fontSize: 12,
                                     ),
                                   ),
-                                  const SizedBox(height: 8),
+                                  const SizedBox(height: 6),
+                                  // ✅ Price và Quantity trong 1 Row
                                   Row(
                                     children: [
                                       Text(
@@ -100,21 +148,24 @@ class CartPage extends StatelessWidget {
                                         style: AppTextStyles.bodyMedium.copyWith(
                                           fontWeight: FontWeight.bold,
                                           color: AppColors.primary,
+                                          fontSize: 14,
                                         ),
                                       ),
                                       const Spacer(),
-                                      // Quantity Controls
+                                      // ✅ Quantity Controls - COMPACT
                                       Container(
                                         decoration: BoxDecoration(
                                           border: Border.all(
-                                            color: AppColors.textSecondary.withOpacity(0.3),
+                                            color: AppColors.textSecondary
+                                                .withOpacity(0.3),
                                           ),
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius: BorderRadius.circular(6),
                                         ),
                                         child: Row(
+                                          mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            IconButton(
-                                              onPressed: () {
+                                            InkWell(
+                                              onTap: () {
                                                 if (item.quantity > 1) {
                                                   cartProvider.updateQuantity(
                                                     item.productId,
@@ -124,21 +175,36 @@ class CartPage extends StatelessWidget {
                                                   );
                                                 }
                                               },
-                                              icon: const Icon(Icons.remove, size: 18),
-                                              constraints: const BoxConstraints(
-                                                minWidth: 32,
-                                                minHeight: 32,
+                                              borderRadius: const BorderRadius.only(
+                                                topLeft: Radius.circular(6),
+                                                bottomLeft: Radius.circular(6),
                                               ),
-                                              padding: EdgeInsets.zero,
-                                            ),
-                                            Text(
-                                              '${item.quantity}',
-                                              style: AppTextStyles.bodyMedium.copyWith(
-                                                fontWeight: FontWeight.bold,
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: 8,
+                                                  vertical: 6,
+                                                ),
+                                                child: const Icon(
+                                                  Icons.remove,
+                                                  size: 16,
+                                                ),
                                               ),
                                             ),
-                                            IconButton(
-                                              onPressed: () {
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 8,
+                                              ),
+                                              child: Text(
+                                                '${item.quantity}',
+                                                style: AppTextStyles.bodyMedium
+                                                    .copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                            ),
+                                            InkWell(
+                                              onTap: () {
                                                 cartProvider.updateQuantity(
                                                   item.productId,
                                                   item.size,
@@ -146,12 +212,20 @@ class CartPage extends StatelessWidget {
                                                   item.quantity + 1,
                                                 );
                                               },
-                                              icon: const Icon(Icons.add, size: 18),
-                                              constraints: const BoxConstraints(
-                                                minWidth: 32,
-                                                minHeight: 32,
+                                              borderRadius: const BorderRadius.only(
+                                                topRight: Radius.circular(6),
+                                                bottomRight: Radius.circular(6),
                                               ),
-                                              padding: EdgeInsets.zero,
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: 8,
+                                                  vertical: 6,
+                                                ),
+                                                child: const Icon(
+                                                  Icons.add,
+                                                  size: 16,
+                                                ),
+                                              ),
                                             ),
                                           ],
                                         ),
@@ -162,10 +236,9 @@ class CartPage extends StatelessWidget {
                               ),
                             ),
 
-                            // Delete Button
+                            // ✅ Delete Button - Compact
                             IconButton(
                               onPressed: () {
-                                // ✅ FIX: Dùng removeItem thay vì removeFromCart
                                 cartProvider.removeItem(
                                   item.productId,
                                   item.size,
@@ -175,6 +248,12 @@ class CartPage extends StatelessWidget {
                               icon: const Icon(
                                 Icons.delete_outline,
                                 color: AppColors.error,
+                                size: 20,
+                              ),
+                              padding: const EdgeInsets.all(4),
+                              constraints: const BoxConstraints(
+                                minWidth: 32,
+                                minHeight: 32,
                               ),
                             ),
                           ],
@@ -226,8 +305,8 @@ class CartPage extends StatelessWidget {
   }
 
   Widget _buildBottomBar(BuildContext context, CartProvider cartProvider) {
-    // ✅ Dùng totalAmount từ CartProvider
     final total = cartProvider.totalAmount;
+    final selectedCount = cartProvider.selectedCount;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -249,7 +328,10 @@ class CartPage extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Tổng tiền', style: AppTextStyles.bodySmall),
+                  Text(
+                    'Tổng tiền ($selectedCount sản phẩm)',
+                    style: AppTextStyles.bodySmall,
+                  ),
                   Text(
                     '${total.toStringAsFixed(0)}đ',
                     style: AppTextStyles.h2.copyWith(color: AppColors.primary),
@@ -260,12 +342,16 @@ class CartPage extends StatelessWidget {
             const SizedBox(width: 16),
             Expanded(
               child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const CheckoutPage()),
-                  );
-                },
+                onPressed: selectedCount > 0
+                    ? () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const CheckoutPage(),
+                          ),
+                        );
+                      }
+                    : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
@@ -273,6 +359,7 @@ class CartPage extends StatelessWidget {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
+                  disabledBackgroundColor: AppColors.textHint,
                 ),
                 child: const Text(
                   'Thanh toán',

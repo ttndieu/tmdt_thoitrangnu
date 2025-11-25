@@ -53,15 +53,18 @@ class OrderProvider with ChangeNotifier {
     required String paymentMethod,
     required Map<String, dynamic> shippingAddress,
     String? voucherId,
+    required List<String> selectedItemIds,
   }) async {
     try {
       print('\n📦 ========== CREATE ORDER (FLUTTER) ==========');
       print('💳 Payment method: $paymentMethod');
       print('🎫 Voucher ID: ${voucherId ?? "None"}');
+      print('🛒 Selected items: ${selectedItemIds.length}');
 
       final requestData = {
         'paymentMethod': paymentMethod,
         'shippingAddress': shippingAddress,
+        'selectedItemIds': selectedItemIds,
         if (voucherId != null && voucherId.isNotEmpty) 
           'voucherId': voucherId,
       };

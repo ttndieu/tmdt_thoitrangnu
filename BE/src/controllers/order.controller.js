@@ -15,11 +15,12 @@ import Voucher from "../models/Voucher.js";
 // ------------------------------------------------------
 export const createOrder = async (req, res) => {
   try {
-    const { paymentMethod, shippingAddress, voucherId } = req.body;
+    const { paymentMethod, shippingAddress, voucherId, selectedItemIds } = req.body;
 
     console.log(`\n📦 ========== CREATE ORDER ==========`);
     console.log(`👤 User: ${req.user._id}`);
     console.log(`🎫 Voucher ID: ${voucherId || 'None'}`);
+    console.log(`🛒 Selected Item IDs: ${selectedItemIds ? JSON.stringify(selectedItemIds) : 'All'}`);
 
     const cart = await Cart.findOne({ user: req.user._id })
       .populate("items.product");
@@ -28,10 +29,27 @@ export const createOrder = async (req, res) => {
       return res.status(400).json({ message: "Cart is empty" });
     }
 
+    // FILTER: Chỉ lấy items được chọn
+let itemsToOrder = cart.items;
+
+if (selectedItemIds && Array.isArray(selectedItemIds) && selectedItemIds.length > 0) {
+  itemsToOrder = cart.items.filter(item => 
+    selectedItemIds.includes(item._id.toString())
+  );
+  
+  console.log(`✅ Filtered ${itemsToOrder.length} selected items from ${cart.items.length} total items`);
+  
+  if (itemsToOrder.length === 0) {
+    return res.status(400).json({ message: "No valid items selected" });
+  }
+} else {
+  console.log(`⚠️ No selectedItemIds provided, using all cart items`);
+}
+
     let originalAmount = 0;
 
     // Check tồn kho & tính tổng
-    for (let item of cart.items) {
+    for (let item of itemsToOrder) {
       const product = item.product;
 
       const variant = product.variants.find(
@@ -97,22 +115,31 @@ export const createOrder = async (req, res) => {
     const totalAmount = originalAmount - discount;
     console.log(`💵 Total amount: ${totalAmount}`);
 
-    // Trừ tồn kho
-    for (let item of cart.items) {
-      await Product.updateOne(
-        {
-          _id: item.product._id,
-          "variants.size": item.size,
-          "variants.color": item.color
-        },
-        { $inc: { "variants.$.stock": -item.quantity } }
-      );
-    }
+    // Trừ tồn kho VÀ tăng sold
+    for (let item of itemsToOrder) {
+    // Trừ stock của variant
+    await Product.updateOne(
+    {
+      _id: item.product._id,
+      "variants.size": item.size,
+      "variants.color": item.color
+    },
+    { $inc: { "variants.$.stock": -item.quantity } }
+  );
+  
+  // THÊM: Tăng sold count của product
+     await Product.findByIdAndUpdate(
+      item.product._id,
+      { $inc: { sold: item.quantity } }
+    );
+    
+    console.log(`Product ${item.product._id}: +${item.quantity} sold`);
+}
 
-    // ✅ Tạo đơn hàng
+    // ✅ Tạo đơn hàng chỉ với items đã chọn
     const order = await Order.create({
       user: req.user._id,
-      items: cart.items.map((i) => ({
+      items: itemsToOrder.map((i) => ({
         product: i.product._id,
         quantity: i.quantity,
         size: i.size,
@@ -143,9 +170,19 @@ export const createOrder = async (req, res) => {
     await notifyNewOrder(req.user._id, fullOrder);
     await sendOrderEmail(req.user.email, fullOrder);
 
-    // Clear cart
-    cart.items = [];
-    await cart.save();
+    // XÓA CHỈ ITEMS ĐÃ CHỌN KHỎI CART
+if (selectedItemIds && selectedItemIds.length > 0) {
+  cart.items = cart.items.filter(item => 
+    !selectedItemIds.includes(item._id.toString())
+  );
+  console.log(`🗑️ Removed ${selectedItemIds.length} selected items from cart`);
+  console.log(`📦 Remaining items in cart: ${cart.items.length}`);
+} else {
+  cart.items = [];
+  console.log(`🗑️ Cleared entire cart`);
+}
+
+await cart.save();
 
     return res.status(201).json({ order: fullOrder });
 
@@ -255,24 +292,33 @@ export const cancelOrder = async (req, res) => {
       });
     }
 
-    // ✅ HOÀN LẠI TỒN KHO
-    console.log(`📦 Hoàn lại tồn kho...`);
-    for (let item of order.items) {
-      try {
-        await Product.updateOne(
-          {
-            _id: item.product._id,
-            "variants.size": item.size,
-            "variants.color": item.color
-          },
-          { $inc: { "variants.$.stock": item.quantity } }
-        );
-        console.log(`✅ Hoàn lại ${item.quantity} sản phẩm ${item.product.name}`);
-      } catch (productErr) {
-        console.error(`❌ Error restoring stock for product ${item.product._id}:`, productErr);
-        // Continue even if one product fails
-      }
-    }
+    // ✅ HOÀN LẠI TỒN KHO VÀ GIẢM SOLD
+console.log(`📦 Hoàn lại tồn kho...`);
+for (let item of order.items) {
+  try {
+    // Hoàn stock
+    await Product.updateOne(
+      {
+        _id: item.product._id,
+        "variants.size": item.size,
+        "variants.color": item.color
+      },
+      { $inc: { "variants.$.stock": item.quantity } }
+    );
+    
+    // ✅ THÊM: Giảm sold count
+    await Product.findByIdAndUpdate(
+      item.product._id,
+      { $inc: { sold: -item.quantity } }
+    );
+    
+    console.log(`✅ Hoàn lại ${item.quantity} sản phẩm ${item.product.name}`);
+    console.log(`✅ Giảm ${item.quantity} sold count`);
+  } catch (productErr) {
+    console.error(`❌ Error restoring stock for product ${item.product._id}:`, productErr);
+    // Continue even if one product fails
+  }
+}
 
     // ✅ HOÀN LẠI VOUCHER (NẾU CÓ)
     if (order.voucher) {

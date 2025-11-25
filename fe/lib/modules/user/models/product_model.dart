@@ -8,6 +8,7 @@ class ProductModel {
   final List<ProductImage> images;
   final List<ProductVariant> variants;
   final CategoryInfo? category;
+  final int sold;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -19,6 +20,7 @@ class ProductModel {
     required this.images,
     required this.variants,
     this.category,
+    this.sold = 0,
     this.createdAt,
     this.updatedAt,
   });
@@ -40,6 +42,7 @@ class ProductModel {
       category: json['category'] != null
           ? CategoryInfo.fromJson(json['category'])
           : null,
+      sold: json['sold'] ?? 0,
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'])
           : null,
