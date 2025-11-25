@@ -11,6 +11,8 @@ class ProductModel {
   final int sold;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final double averageRating;
+  final int reviewCount;
 
   ProductModel({
     required this.id,
@@ -23,6 +25,8 @@ class ProductModel {
     this.sold = 0,
     this.createdAt,
     this.updatedAt,
+    this.averageRating = 0.0,
+    this.reviewCount = 0,
   });
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
@@ -49,6 +53,8 @@ class ProductModel {
       updatedAt: json['updatedAt'] != null
           ? DateTime.parse(json['updatedAt'])
           : null,
+      averageRating: (json['averageRating'] ?? 0).toDouble(),
+      reviewCount: json['reviewCount'] ?? 0,
     );
   }
 
@@ -77,6 +83,10 @@ class ProductModel {
     }
     return '${minPrice.toStringAsFixed(0)}đ - ${maxPrice.toStringAsFixed(0)}đ';
   }
+
+  bool get hasReviews => reviewCount > 0;
+  
+  bool get hasValidRating => reviewCount > 0 && averageRating > 0;
 }
 
 // Nested classes
