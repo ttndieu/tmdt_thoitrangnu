@@ -16,6 +16,14 @@ class AdminProvider with ChangeNotifier {
   bool get isAdmin => auth.user?.role == "admin";
   String? get token => auth.user?.token;
 
+  // ====== SIDEBAR COLLAPSE SUPPORT ======
+  bool isSidebarCollapsed = false;
+
+  void toggleSidebar() {
+    isSidebarCollapsed = !isSidebarCollapsed;
+    notifyListeners();
+  }
+
   // PRODUCT DETAIL / FORM SUPPORT
   String? selectedProductId;
   String? editingProductId;
@@ -44,12 +52,17 @@ class AdminProvider with ChangeNotifier {
 
   void changeRoute(String route) {
     _currentRoute = route;
+
     // reset editing when leaving form/detail
     if (route != AdminRoutes.productDetail) selectedProductId = null;
     if (route != AdminRoutes.productForm) {
       editingProductId = null;
       editingProductData = null;
     }
+
+    if (route != AdminRoutes.userDetail) selectedUserId = null;
+    if (route != AdminRoutes.userForm) editingUser = null;
+
     notifyListeners();
   }
 
@@ -59,9 +72,37 @@ class AdminProvider with ChangeNotifier {
     selectedProductId = null;
     editingProductId = null;
     editingProductData = null;
+
+    selectedUserId = null;
+    editingUser = null;
+
     notifyListeners();
+
     if (context.mounted) {
       Navigator.of(context).pushNamedAndRemoveUntil('/login', (r) => false);
     }
+  }
+
+  // USER DETAIL / FORM SUPPORT
+  String? selectedUserId;
+  Map<String, dynamic>? editingUser;
+
+  void openUserDetail(String id) {
+    selectedUserId = id;
+    _currentRoute = AdminRoutes.userDetail;
+    notifyListeners();
+  }
+
+  void openUserForm([Map<String, dynamic>? user]) {
+    editingUser = user;
+    _currentRoute = AdminRoutes.userForm;
+    notifyListeners();
+  }
+
+  void backToUsers() {
+    selectedUserId = null;
+    editingUser = null;
+    _currentRoute = AdminRoutes.users;
+    notifyListeners();
   }
 }
