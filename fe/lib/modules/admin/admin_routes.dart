@@ -7,6 +7,11 @@ class AdminRoutes {
   static const String vouchers = "/admin/vouchers";
 
   static const String productDetail = "/admin/product/detail";
-
   static const String productForm = "/admin/product/form";
+
+
+static const String users = "/admin/users";
+static const String userDetail = "/admin/user-detail";
+static const String userForm = "/admin/user-form";
+
 }
