@@ -477,14 +477,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
             contentPadding: EdgeInsets.zero,
           ),
           RadioListTile<String>(
-            value: 'momo',
-            groupValue: _paymentMethod,
-            onChanged: (value) => setState(() => _paymentMethod = value!),
-            title: const Text('Ví MoMo'),
-            activeColor: AppColors.primary,
-            contentPadding: EdgeInsets.zero,
-          ),
-          RadioListTile<String>(
             value: 'vnpay',
             groupValue: _paymentMethod,
             onChanged: (value) => setState(() => _paymentMethod = value!),

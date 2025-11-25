@@ -1,5 +1,7 @@
 // lib/modules/user/screens/mall_page.dart
 
+import 'package:fe/modules/user/providers/notification_provider.dart';
+import 'package:fe/modules/user/screens/notifications_page.dart';
 import 'package:fe/modules/user/screens/product_detail_page.dart.dart';
 import 'package:fe/modules/user/widgets/home/product_grid.dart';
 import 'package:flutter/material.dart';
@@ -8,12 +10,12 @@ import 'package:provider/provider.dart';
 import '../constants/app_color.dart';
 import '../constants/app_text_styles.dart';
 import '../models/mall_provider.dart';
-import '../widgets/home/home_app_bar.dart'; 
+import '../widgets/home/home_app_bar.dart';
 import '../widgets/mall/filter_bottom_sheet.dart';
 import '../widgets/mall/sort_bottom_sheet.dart';
-import '../../auth/providers/auth_provider.dart'; 
-import '../providers/cart_provider.dart'; 
-import 'cart_page.dart'; 
+import '../../auth/providers/auth_provider.dart';
+import '../providers/cart_provider.dart';
+import 'cart_page.dart';
 
 class MallPage extends StatefulWidget {
   const MallPage({Key? key}) : super(key: key);
@@ -34,7 +36,8 @@ class _MallPageState extends State<MallPage>
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
-      context.read<CartProvider>().fetchCart(); // ✅ THÊM
+      context.read<CartProvider>().fetchCart();
+      context.read<NotificationProvider>().fetchNotifications();
     });
   }
 
@@ -76,9 +79,11 @@ class _MallPageState extends State<MallPage>
   Widget build(BuildContext context) {
     super.build(context);
 
-    // ✅ THÊM: Get userName
+    // THÊM: Get userName
     final authProvider = context.watch<AuthProvider>();
     final userName = authProvider.user?.name ?? 'Khách';
+    final notificationProvider = context.watch<NotificationProvider>();
+    final avatarUrl = authProvider.user?.avatar;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -87,13 +92,14 @@ class _MallPageState extends State<MallPage>
           builder: (context, provider, _) {
             return Column(
               children: [
-                // ✅ THÊM: HomeAppBar với cart & notifications
+                // THÊM: HomeAppBar với cart & notifications
                 Consumer<CartProvider>(
                   builder: (context, cartProvider, _) {
                     return HomeAppBar(
                       userName: userName,
+                      avatarUrl: avatarUrl,
                       cartCount: cartProvider.itemCount,
-                      notificationCount: 0,
+                      notificationCount: notificationProvider.unreadCount,
                       onCartTap: () {
                         Navigator.push(
                           context,
@@ -103,9 +109,10 @@ class _MallPageState extends State<MallPage>
                         );
                       },
                       onNotificationTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('🔔 Tính năng thông báo đang phát triển'),
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const NotificationsPage(),
                           ),
                         );
                       },
@@ -256,11 +263,7 @@ class _MallPageState extends State<MallPage>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.error_outline,
-            size: 64,
-            color: AppColors.error,
-          ),
+          const Icon(Icons.error_outline, size: 64, color: AppColors.error),
           const SizedBox(height: 16),
           const Text('Có lỗi xảy ra', style: AppTextStyles.h2),
           const SizedBox(height: 8),
@@ -296,9 +299,7 @@ class _MallPageState extends State<MallPage>
           const SizedBox(height: 16),
           Text(
             'Không tìm thấy sản phẩm',
-            style: AppTextStyles.h2.copyWith(
-              color: AppColors.textSecondary,
-            ),
+            style: AppTextStyles.h2.copyWith(color: AppColors.textSecondary),
           ),
           const SizedBox(height: 8),
           const Text(
@@ -346,10 +347,7 @@ class _ActionButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppColors.textHint.withOpacity(0.2)),
           boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 4,
-            ),
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4),
           ],
         ),
         child: Row(
