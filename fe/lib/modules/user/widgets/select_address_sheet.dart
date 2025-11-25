@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../data/models/address_model.dart';
 import '../../auth/providers/auth_provider.dart';
-import '../providers/address_provider.dart';
 import '../constants/app_color.dart';
 import '../constants/app_text_styles.dart';
 import '../screens/add_address_page.dart';

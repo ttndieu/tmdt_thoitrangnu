@@ -39,23 +39,41 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     _loadOrderDetail();
   }
 
-  Future<void> _loadOrderDetail() async {
-    final provider = context.read<OrderProvider>();
-    final order = provider.orders.firstWhere(
-      (o) => o.id == widget.orderId,
-      orElse: () => provider.orders.first,
-    );
+Future<void> _loadOrderDetail() async {
+  final provider = context.read<OrderProvider>();
+  final order = provider.orders.firstWhere(
+    (o) => o.id == widget.orderId,
+    orElse: () => provider.orders.first,
+  );
 
-    setState(() {
-      _order = order;
-      _isLoading = false;
-    });
-
-    // ✅ Load review status for all products
-    if (_order != null && _order!.status == 'completed') {
-      await _loadReviewStatus();
-    }
+  // ✅ THÊM DEBUG LOG
+  print('📦 ========== ORDER DETAIL DEBUG ==========');
+  print('📦 Order ID: ${order.id}');
+  print('📦 Total items: ${order.items.length}');
+  
+  for (var i = 0; i < order.items.length; i++) {
+    final item = order.items[i];
+    print('');
+    print('📦 Item [$i]:');
+    print('   - productId: ${item.productId}');
+    print('   - productName: "${item.productName}"'); // ← KIỂM TRA GIÁ TRỊ NÀY
+    print('   - imageUrl: ${item.imageUrl}');
+    print('   - size: ${item.size}');
+    print('   - color: ${item.color}');
+    print('   - quantity: ${item.quantity}');
+    print('   - price: ${item.price}');
   }
+  print('📦 ==========================================');
+
+  setState(() {
+    _order = order;
+    _isLoading = false;
+  });
+
+  if (_order != null && _order!.status == 'completed') {
+    await _loadReviewStatus();
+  }
+}
 
   // ✅ LOAD REVIEW STATUS CHO TẤT CẢ PRODUCTS
   Future<void> _loadReviewStatus() async {
@@ -457,7 +475,7 @@ Widget _buildOrderItems() {
             Icon(Icons.check_circle, color: Colors.green, size: 18),
             SizedBox(width: 8),
             Text(
-              '✅ Đã đánh giá',
+              'Đã đánh giá',
               style: TextStyle(
                 color: Colors.green,
                 fontWeight: FontWeight.w600,
