@@ -17,7 +17,8 @@ import wishlistRoutes from "./routes/wishlist.routes.js";
 import voucherRoutes from "./routes/voucher.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
 import adminUserRoutes from "./routes/admin_users.routes.js";
-
+import paymentRoutes from "./routes/payment.routes.js";
+import paymentIntentRoutes from "./routes/payment_intent.routes.js";
 
 const app = express();
 
@@ -45,6 +46,7 @@ app.use("/api/admin", adminUserRoutes);     // route quản lý user mới
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/voucher", voucherRoutes);
 app.use("/api/notifications", notificationRoutes);
-
+app.use("/api/payment", paymentRoutes);
+app.use("/api/payment/intent", paymentIntentRoutes);
 
 export default app;

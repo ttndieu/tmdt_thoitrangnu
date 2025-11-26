@@ -22,7 +22,8 @@ class _OrdersPageState extends State<OrdersPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    // 6 tabs
+    _tabController = TabController(length: 6, vsync: this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadOrders();
@@ -58,6 +59,7 @@ class _OrdersPageState extends State<OrdersPage>
           tabs: const [
             Tab(text: 'Tất cả'),
             Tab(text: 'Chờ xác nhận'),
+            Tab(text: 'Chờ giao hàng'),  
             Tab(text: 'Đang giao'),
             Tab(text: 'Hoàn thành'),
             Tab(text: 'Đã hủy'),
@@ -77,6 +79,7 @@ class _OrdersPageState extends State<OrdersPage>
             children: [
               _buildOrderList(provider, 'all'),
               _buildOrderList(provider, 'pending'),
+              _buildOrderList(provider, 'confirmed'), 
               _buildOrderList(provider, 'shipping'),
               _buildOrderList(provider, 'completed'),
               _buildOrderList(provider, 'cancelled'),
@@ -103,7 +106,7 @@ class _OrdersPageState extends State<OrdersPage>
         itemBuilder: (context, index) {
           final order = orders[index];
           return _OrderCard(
-            orderNumber: order.orderNumber,
+            // XÓA orderNumber - KHÔNG TRUYỀN VÀO
             date: order.formattedDate,
             status: order.status,
             items: order.items,
@@ -170,6 +173,10 @@ class _OrdersPageState extends State<OrdersPage>
         message = 'Chưa có đơn hàng chờ xác nhận';
         icon = Icons.hourglass_empty;
         break;
+      case 'confirmed': 
+        message = 'Chưa có đơn hàng chờ giao hàng';
+        icon = Icons.inventory_2_outlined;
+        break;
       case 'shipping':
         message = 'Chưa có đơn hàng đang giao';
         icon = Icons.local_shipping_outlined;
@@ -219,9 +226,9 @@ class _OrdersPageState extends State<OrdersPage>
   }
 }
 
-// ✅ ORDER CARD VỚI HEADER MỚI
+// ORDER CARD - XÓA orderNumber
 class _OrderCard extends StatelessWidget {
-  final String orderNumber;
+  // ✅ XÓA orderNumber parameter
   final String date;
   final String status;
   final List<OrderItem> items;
@@ -230,7 +237,6 @@ class _OrderCard extends StatelessWidget {
   final VoidCallback? onCancel;
 
   const _OrderCard({
-    required this.orderNumber,
     required this.date,
     required this.status,
     required this.items,
@@ -257,20 +263,11 @@ class _OrderCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ✅ HEADER MỚI - STATUS VÀ NGÀY CÙNG HÀNG NGANG
-              Text(
-                orderNumber,
-                style: AppTextStyles.bodyMedium.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              // Dòng 2: Status badge (trái) và Ngày (phải)
+              // HEADER MỚI - CHỈ STATUS VÀ NGÀY
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -286,13 +283,12 @@ class _OrderCard extends StatelessWidget {
 
               const Divider(height: 24),
 
-              // ✅ DANH SÁCH SẢN PHẨM
+              // DANH SÁCH SẢN PHẨM
               ...displayItems.map(
                 (item) => Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Row(
                     children: [
-                      // Hình ảnh
                       ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: item.imageUrl.isNotEmpty
@@ -317,7 +313,6 @@ class _OrderCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 12),
 
-                      // Thông tin sản phẩm
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -366,7 +361,6 @@ class _OrderCard extends StatelessWidget {
                 ),
               ),
 
-              // ✅ SỐ SẢN PHẨM CÒN LẠI
               if (remainingCount > 0)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
@@ -381,7 +375,7 @@ class _OrderCard extends StatelessWidget {
 
               const Divider(height: 12),
 
-              // ✅ TỔNG TIỀN
+              // TỔNG TIỀN
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -398,7 +392,7 @@ class _OrderCard extends StatelessWidget {
                 ],
               ),
 
-              // ✅ BUTTONS (CHỈ HIỆN KHI PENDING)
+              // BUTTONS
               if (status == 'pending')
                 Padding(
                   padding: const EdgeInsets.only(top: 16),
@@ -447,7 +441,7 @@ class _OrderCard extends StatelessWidget {
         break;
       case 'confirmed':
         color = Colors.blue;
-        label = 'Đã xác nhận';
+        label = 'Chờ giao hàng'; 
         break;
       case 'shipping':
         color = Colors.purple;

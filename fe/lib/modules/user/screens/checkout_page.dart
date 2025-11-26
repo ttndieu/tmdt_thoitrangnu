@@ -2,18 +2,19 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../data/models/address_model.dart';
+import '../../../data/models/address_model.dart'; 
 import '../../auth/providers/auth_provider.dart';
 import '../constants/app_color.dart';
 import '../constants/app_text_styles.dart';
 import '../providers/cart_provider.dart';
 import '../providers/order_provider.dart';
-import '../providers/voucher_provider.dart'; 
-import '../models/voucher_model.dart'; 
-import '../widgets/select_address_sheet.dart';
+import '../providers/voucher_provider.dart';
+import '../models/voucher_model.dart';
+import '../widgets/select_address_sheet.dart'; 
 import '../widgets/voucher_select_sheet.dart'; 
-import '../screens/add_address_page.dart';
+import '../screens/add_address_page.dart'; 
 import 'order_success_page.dart';
+import 'vnpay_webview_page.dart';
 
 class CheckoutPage extends StatefulWidget {
   const CheckoutPage({Key? key}) : super(key: key);
@@ -26,14 +27,14 @@ class _CheckoutPageState extends State<CheckoutPage> {
   String _paymentMethod = 'cod';
   bool _isProcessing = false;
   AddressModel? _selectedAddress;
-  VoucherModel? _selectedVoucher;  // ✅ ADD
-  double _discount = 0;  // ✅ ADD
+  VoucherModel? _selectedVoucher;
+  double _discount = 0;
+  String? _paidIntentId; // ✅ Intent đã thanh toán
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Tự động chọn địa chỉ mặc định
       final user = context.read<AuthProvider>().user;
       if (user?.defaultAddress != null) {
         setState(() {
@@ -41,20 +42,34 @@ class _CheckoutPageState extends State<CheckoutPage> {
         });
       }
 
-      // ✅ Load vouchers
       context.read<VoucherProvider>().fetchVouchers();
+
+      // ✅ Check intent đã thanh toán
+      _checkPendingIntent();
     });
   }
 
-  double _calculateTotal(CartProvider cartProvider) {
-  // CHỈ TÍNH ITEMS ĐƯỢC CHỌN
-  return cartProvider.selectedItems.fold(0.0, (sum, item) => sum + item.subtotal);
+  // ✅ CHECK INTENT ĐÃ THANH TOÁN
+  Future<void> _checkPendingIntent() async {
+    final orderProvider = context.read<OrderProvider>();
+    final intent = orderProvider.currentIntent;
+
+    if (intent != null && intent.isPaid && intent.paymentMethod == 'vnpay') {
+      print('✅ Found paid intent: ${intent.id}');
+      setState(() {
+        _paidIntentId = intent.id;
+        _paymentMethod = 'vnpay';
+      });
+    }
   }
 
-  // ✅ SHOW VOUCHER SHEET
+  double _calculateTotal(CartProvider cartProvider) {
+    return cartProvider.selectedItems.fold(0.0, (sum, item) => sum + item.subtotal);
+  }
+
   void _showVoucherSheet() async {
-    final cartTotal = context.read<CartProvider>().totalAmount;
-    
+    final cartTotal = _calculateTotal(context.read<CartProvider>());
+
     final result = await showModalBottomSheet<VoucherModel>(
       context: context,
       isScrollControlled: true,
@@ -90,6 +105,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
           return Column(
             children: [
+              // ✅ BANNER ĐÃ THANH TOÁN
+              if (_paidIntentId != null) _buildPaidBanner(),
+
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.all(16),
@@ -98,7 +116,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     const SizedBox(height: 16),
                     _buildOrderItems(cartProvider),
                     const SizedBox(height: 16),
-                    _buildVoucherSection(),  // ✅ ADD
+                    _buildVoucherSection(),
                     const SizedBox(height: 16),
                     _buildPaymentMethod(),
                     const SizedBox(height: 16),
@@ -110,6 +128,65 @@ class _CheckoutPageState extends State<CheckoutPage> {
             ],
           );
         },
+      ),
+    );
+  }
+
+  // ✅ BANNER ĐÃ THANH TOÁN
+  Widget _buildPaidBanner() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.green.shade400, Colors.green.shade600],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.green.withOpacity(0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.check_circle,
+              color: Colors.white,
+              size: 32,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '✅ VNPay đã thanh toán',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Nhấn "Đặt hàng" để hoàn tất đơn hàng',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.9),
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -363,7 +440,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
-  // ✅ VOUCHER SECTION
   Widget _buildVoucherSection() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -399,7 +475,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.check_circle, color: AppColors.primary, size: 20),
+                  const Icon(Icons.check_circle,
+                      color: AppColors.primary, size: 20),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Column(
@@ -451,6 +528,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
   }
 
   Widget _buildPaymentMethod() {
+    final isDisabled = _paidIntentId != null;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -471,7 +550,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
           RadioListTile<String>(
             value: 'cod',
             groupValue: _paymentMethod,
-            onChanged: (value) => setState(() => _paymentMethod = value!),
+            onChanged: isDisabled
+                ? null
+                : (value) => setState(() => _paymentMethod = value!),
             title: const Text('Thanh toán khi nhận hàng (COD)'),
             activeColor: AppColors.primary,
             contentPadding: EdgeInsets.zero,
@@ -479,7 +560,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
           RadioListTile<String>(
             value: 'vnpay',
             groupValue: _paymentMethod,
-            onChanged: (value) => setState(() => _paymentMethod = value!),
+            onChanged: isDisabled
+                ? null
+                : (value) => setState(() => _paymentMethod = value!),
             title: const Text('VNPAY'),
             activeColor: AppColors.primary,
             contentPadding: EdgeInsets.zero,
@@ -489,11 +572,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
-  // ✅ ORDER SUMMARY WITH DISCOUNT
   Widget _buildOrderSummary(CartProvider cartProvider) {
     const shippingFee = 15000.0;
     final subtotal = _calculateTotal(cartProvider);
-    final total = subtotal + shippingFee - _discount;
+    
+    final total = _paidIntentId != null
+        ? 0.0
+        : (subtotal + shippingFee - _discount);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -505,7 +590,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
         children: [
           _buildSummaryRow('Tạm tính', subtotal),
           const SizedBox(height: 8),
-          _buildSummaryRow('Phí vận chuyển', shippingFee),
+          if (_paidIntentId == null) _buildSummaryRow('Phí vận chuyển', shippingFee),
           if (_discount > 0) ...[
             const SizedBox(height: 8),
             _buildSummaryRow('Giảm giá', -_discount, isDiscount: true),
@@ -517,8 +602,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
-  // ✅ SUMMARY ROW WITH DISCOUNT STYLING
-  Widget _buildSummaryRow(String label, double amount, {
+  Widget _buildSummaryRow(
+    String label,
+    double amount, {
     bool isTotal = false,
     bool isDiscount = false,
   }) {
@@ -530,7 +616,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
           style: isTotal
               ? AppTextStyles.h3
               : AppTextStyles.bodyMedium.copyWith(
-                  color: isDiscount ? AppColors.error : AppColors.textSecondary,
+                  color:
+                      isDiscount ? AppColors.error : AppColors.textSecondary,
                 ),
         ),
         Text(
@@ -542,17 +629,37 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       fontWeight: FontWeight.bold,
                       color: AppColors.error,
                     )
-                  : AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                  : AppTextStyles.bodyMedium
+                      .copyWith(fontWeight: FontWeight.bold),
         ),
       ],
     );
   }
 
-  // ✅ BOTTOM BAR WITH DISCOUNT
   Widget _buildBottomBar(CartProvider cartProvider) {
     const shippingFee = 15000.0;
     final subtotal = _calculateTotal(cartProvider);
-    final total = subtotal + shippingFee - _discount;
+    final total = _paidIntentId != null
+        ? 0.0
+        : (subtotal + shippingFee - _discount);
+
+    String buttonLabel;
+    VoidCallback? buttonAction;
+    Color buttonColor;
+
+    if (_paidIntentId != null) {
+      buttonLabel = 'Đặt hàng';
+      buttonAction = _placeOrder;
+      buttonColor = AppColors.primary;
+    } else if (_paymentMethod == 'vnpay') {
+      buttonLabel = 'Thanh toán VNPay';
+      buttonAction = _payVNPay;
+      buttonColor = Colors.blue;
+    } else {
+      buttonLabel = 'Đặt hàng';
+      buttonAction = _placeOrder;
+      buttonColor = AppColors.primary;
+    }
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -574,7 +681,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Tổng thanh toán', style: AppTextStyles.bodySmall),
+                  const Text('Tổng thanh toán',
+                      style: AppTextStyles.bodySmall),
                   Text(
                     '${total.toStringAsFixed(0)}đ',
                     style: AppTextStyles.h2.copyWith(color: AppColors.primary),
@@ -593,9 +701,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
             const SizedBox(width: 16),
             Expanded(
               child: ElevatedButton(
-                onPressed: (_isProcessing || cartProvider.selectedCount == 0) ? null : _placeOrder,
+                onPressed: (_isProcessing || cartProvider.selectedCount == 0)
+                    ? null
+                    : buttonAction,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: buttonColor,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -610,9 +720,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
                           strokeWidth: 2,
                         ),
                       )
-                    : const Text(
-                        'Đặt hàng',
-                        style: TextStyle(
+                    : Text(
+                        buttonLabel,
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
@@ -625,8 +735,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
-  // ✅ PLACE ORDER WITH VOUCHER
-  Future<void> _placeOrder() async {
+  Future<void> _payVNPay() async {
     if (_selectedAddress == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -637,7 +746,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
       return;
     }
 
-    // Kiểm tra có sản phẩm được chọn không
     final cartProvider = context.read<CartProvider>();
     if (cartProvider.selectedCount == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -652,36 +760,184 @@ class _CheckoutPageState extends State<CheckoutPage> {
     setState(() => _isProcessing = true);
 
     try {
-      final selectedItemIds = cartProvider.selectedItems
-      .map((item) => item.id)  // Lấy ID của từng item
-      .toList();
-      
-      print('🛒 Selected item IDs to order: $selectedItemIds');
+      final selectedItemIds =
+          cartProvider.selectedItems.map((item) => item.id).toList();
 
-      // ✅ FIX: Đổi createOrder → createOrderFromCart
-      final order = await context.read<OrderProvider>().createOrderFromCart(
-            paymentMethod: _paymentMethod,
+      print('🏦 VNPay payment - Creating intent...');
+
+      final intent = await context.read<OrderProvider>().createPaymentIntent(
+            paymentMethod: 'vnpay',
             shippingAddress: _selectedAddress!.toJson(),
             voucherId: _selectedVoucher?.id,
             selectedItemIds: selectedItemIds,
           );
 
-      if (order != null && mounted) {
-        await context.read<CartProvider>().fetchCart();
-        context.read<VoucherProvider>().removeVoucher();
+      if (intent == null) {
+        throw Exception('Không thể tạo payment intent');
+      }
 
-        Navigator.pushReplacement(
+      print('✅ Intent created: ${intent.id}');
+      print('💳 Creating VNPay URL...');
+
+      final paymentResponse = await context
+          .read<OrderProvider>()
+          .createVNPayPaymentFromIntent(intentId: intent.id);
+
+      if (!paymentResponse.success || paymentResponse.paymentUrl == null) {
+        throw Exception(
+            paymentResponse.message ?? 'Không thể tạo link thanh toán');
+      }
+
+      print('✅ Opening VNPay WebView...');
+
+      if (mounted) {
+        final result = await Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => OrderSuccessPage(order: order)),
+          MaterialPageRoute(
+            builder: (_) => VNPayWebViewPage(
+              paymentUrl: paymentResponse.paymentUrl!,
+              intentId: intent.id,
+            ),
+          ),
         );
-      } else if (mounted) {
+
+        if (result == true && mounted) {
+          print('✅ Payment successful, refreshing intent...');
+
+          final updatedIntent = await context
+              .read<OrderProvider>()
+              .getPaymentIntent(intent.id);
+
+          if (updatedIntent != null && updatedIntent.isPaid) {
+            setState(() {
+              _paidIntentId = updatedIntent.id;
+            });
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                    '✅ Thanh toán thành công! Nhấn "Đặt hàng" để hoàn tất.'),
+                backgroundColor: Colors.green,
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
+        } else if (result == false && mounted) {
+          print('❌ Payment failed');
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('❌ Thanh toán thất bại. Vui lòng thử lại.'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('❌ Pay VNPay error: $e');
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('❌ Đặt hàng thất bại. Vui lòng thử lại!'),
+          SnackBar(
+            content: Text('❌ Lỗi: $e'),
             backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 5),
           ),
         );
       }
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
+    }
+  }
+
+  Future<void> _placeOrder() async {
+    if (_selectedAddress == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('❌ Vui lòng chọn địa chỉ giao hàng'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    final cartProvider = context.read<CartProvider>();
+    if (cartProvider.selectedCount == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('❌ Vui lòng chọn ít nhất 1 sản phẩm'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isProcessing = true);
+
+    try {
+      final selectedItemIds =
+          cartProvider.selectedItems.map((item) => item.id).toList();
+
+      if (_paidIntentId != null) {
+        print('🎯 Creating order from paid intent: $_paidIntentId');
+
+        final order = await context
+            .read<OrderProvider>()
+            .createOrderFromIntent(intentId: _paidIntentId!);
+
+        if (order == null) {
+          throw Exception('Không thể tạo đơn hàng');
+        }
+
+        print('✅ Order created: ${order.id}');
+
+        if (mounted) {
+          await context.read<CartProvider>().fetchCart();
+          context.read<VoucherProvider>().removeVoucher();
+          context.read<OrderProvider>().clearIntent();
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => OrderSuccessPage(order: order),
+            ),
+          );
+        }
+        return;
+      }
+
+      if (_paymentMethod == 'cod') {
+        print('💵 COD payment - Creating order...');
+
+        final order = await context.read<OrderProvider>().createOrderFromCart(
+              paymentMethod: 'cod',
+              shippingAddress: _selectedAddress!.toJson(),
+              voucherId: _selectedVoucher?.id,
+              selectedItemIds: selectedItemIds,
+            );
+
+        if (order == null) {
+          throw Exception('Không thể tạo đơn hàng');
+        }
+
+        print('✅ Order created: ${order.id}');
+
+        if (mounted) {
+          await context.read<CartProvider>().fetchCart();
+          context.read<VoucherProvider>().removeVoucher();
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => OrderSuccessPage(order: order),
+            ),
+          );
+        }
+        return;
+      }
+
+      throw Exception('Vui lòng thanh toán VNPay trước');
     } catch (e) {
       print('❌ Place order error: $e');
       if (mounted) {
@@ -689,6 +945,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
           SnackBar(
             content: Text('❌ Lỗi: $e'),
             backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 5),
           ),
         );
       }

@@ -13,7 +13,6 @@ class OrderModel {
   final DateTime createdAt;
   final DateTime updatedAt;
   
-  // ✅ THÊM VOUCHER FIELDS
   final String? voucherCode;
   final double? discount;
   final double? originalAmount;
@@ -30,16 +29,18 @@ class OrderModel {
     required this.shippingAddress,
     required this.createdAt,
     required this.updatedAt,
-    this.voucherCode,        // ✅ NULLABLE
-    this.discount,           // ✅ NULLABLE
-    this.originalAmount,     // ✅ NULLABLE
+    this.voucherCode,
+    this.discount,
+    this.originalAmount,
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
     return OrderModel(
       id: json['_id'] ?? '',
-      userId: json['user'] ?? '',
-      orderNumber: json['orderNumber'] ?? '',
+      userId: json['user'] is String 
+          ? json['user'] 
+          : (json['user']?['_id'] ?? ''),  // XỬ LÝ OBJECT/STRING
+      orderNumber: json['orderNumber'] ?? json['_id'] ?? '',  // FALLBACK TO _id
       items: (json['items'] as List?)
               ?.map((item) => OrderItem.fromJson(item))
               .toList() ??
@@ -47,7 +48,7 @@ class OrderModel {
       totalAmount: (json['totalAmount'] ?? 0).toDouble(),
       status: json['status'] ?? 'pending',
       paymentMethod: json['paymentMethod'] ?? 'cod',
-      paymentStatus: json['paymentStatus'] ?? 'pending',
+      paymentStatus: json['paymentStatus'] ?? 'pending', 
       shippingAddress: ShippingAddress.fromJson(json['shippingAddress'] ?? {}),
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'])
@@ -55,7 +56,6 @@ class OrderModel {
       updatedAt: json['updatedAt'] != null
           ? DateTime.parse(json['updatedAt'])
           : DateTime.now(),
-      // ✅ PARSE VOUCHER FIELDS
       voucherCode: json['voucherCode'],
       discount: json['discount'] != null 
           ? (json['discount'] as num).toDouble() 
@@ -79,7 +79,6 @@ class OrderModel {
       'shippingAddress': shippingAddress.toJson(),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
-      // ✅ ADD VOUCHER FIELDS
       if (voucherCode != null) 'voucherCode': voucherCode,
       if (discount != null) 'discount': discount,
       if (originalAmount != null) 'originalAmount': originalAmount,
@@ -100,7 +99,7 @@ class OrderModel {
       case 'pending':
         return 'Chờ xác nhận';
       case 'confirmed':
-        return 'Đã xác nhận';
+        return 'Chờ giao hàng';  
       case 'shipping':
         return 'Đang giao';
       case 'completed':
@@ -129,7 +128,6 @@ class OrderModel {
     return status == 'pending' || status == 'confirmed';
   }
   
-  // CHECK NẾU CÓ VOUCHER
   bool get hasVoucher {
     return voucherCode != null && 
            voucherCode!.isNotEmpty && 
@@ -161,7 +159,6 @@ class OrderItem {
   });
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
-    // Handle nested product object
     final product = json['product'] is Map ? json['product'] : {};
     final images = product['images'] is List ? product['images'] : [];
     
