@@ -8,286 +8,295 @@ import '../models/notification_model.dart';
 class NotificationProvider with ChangeNotifier {
   final ApiClient _apiClient = ApiClient();
 
+  List<NotificationModel> _allNotifications = [];
   List<NotificationModel> _notifications = [];
+  String _currentFilter = 'all';
   bool _isLoading = false;
   String? _error;
   int _unreadCount = 0;
-  String _selectedFilter = 'all';
 
-  List<NotificationModel> get notifications => _filteredNotifications;
+  List<NotificationModel> get notifications => _notifications;
   bool get isLoading => _isLoading;
   String? get error => _error;
   int get unreadCount => _unreadCount;
-  String get selectedFilter => _selectedFilter;
+  String get selectedFilter => _currentFilter;
 
-  List<NotificationModel> get _filteredNotifications {
-    if (_selectedFilter == 'all') {
-      return _notifications;
-    }
-
-    NotificationType? filterType;
-    switch (_selectedFilter) {
-      case 'order':
-        filterType = NotificationType.order;
-        break;
-      case 'promotion':
-        filterType = NotificationType.promotion;
-        break;
-      case 'system':
-        filterType = NotificationType.system;
-        break;
-    }
-
-    return _notifications.where((n) => n.type == filterType).toList();
-  }
-
-  int getCountByType(String type) {
-    if (type == 'all') return _notifications.length;
-    
-    NotificationType? filterType;
-    switch (type) {
-      case 'order':
-        filterType = NotificationType.order;
-        break;
-      case 'promotion':
-        filterType = NotificationType.promotion;
-        break;
-      case 'system':
-        filterType = NotificationType.system;
-        break;
-    }
-
-    return _notifications.where((n) => n.type == filterType).length;
-  }
-
-  bool hasUnreadByType(String type) {
-    if (type == 'all') {
-      return _notifications.any((n) => !n.isRead);
-    }
-    
-    NotificationType? filterType;
-    switch (type) {
-      case 'order':
-        filterType = NotificationType.order;
-        break;
-      case 'promotion':
-        filterType = NotificationType.promotion;
-        break;
-      case 'system':
-        filterType = NotificationType.system;
-        break;
-    }
-
-    return _notifications.any((n) => n.type == filterType && !n.isRead);
-  }
-
-  void setFilter(String filter) {
-    _selectedFilter = filter;
-    notifyListeners();
-  }
-
-  // ✅ ✅ ✅ FETCH NOTIFICATIONS VỚI DEBUG LOGS CHI TIẾT ✅ ✅ ✅
+  // ✅ FETCH NOTIFICATIONS (Backend đã filter voucher/promotion)
   Future<void> fetchNotifications() async {
-    print('');
-    print('🔄 ==================== FETCH NOTIFICATIONS START ====================');
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      print('📡 API URL: ${ApiConfig.NOTIFICATIONS}');
+      print('\n📡 ========== FETCH NOTIFICATIONS ==========');
+      
       final response = await _apiClient.get(ApiConfig.NOTIFICATIONS);
-
-      print('✅ Response status: ${response.statusCode}');
-      print('📦 Response data type: ${response.data.runtimeType}');
-      print('📦 Full response: ${response.data}');
 
       if (response.statusCode == 200) {
         final data = response.data;
         
-        // ✅ CHECK: Response structure
-        print('');
-        print('🔍 Keys in response: ${data.keys.toList()}');
-        print('🔍 Has "notifications" key: ${data.containsKey('notifications')}');
-        print('🔍 Has "unreadCount" key: ${data.containsKey('unreadCount')}');
-        
         // Parse notifications
-        if (data['notifications'] != null) {
-          if (data['notifications'] is List) {
-            final notificationsList = data['notifications'] as List;
-            print('📊 Total notifications in response: ${notificationsList.length}');
-            
-            _notifications = notificationsList
-                .map((json) => NotificationModel.fromJson(json))
-                .toList();
-            
-            print('📊 Notifications successfully parsed: ${_notifications.length}');
-            print('');
-            
-            // ✅ DEBUG: Print each notification's status
-            for (var i = 0; i < _notifications.length; i++) {
-              final n = _notifications[i];
-              print('  [$i] Title: "${n.title}"');
-              print('      Type: ${n.type}');
-              print('      isRead: ${n.isRead}');
-              print('      Created: ${n.timeAgo}');
-            }
-            
-            // Count manually from list
-            final manualUnreadCount = _notifications.where((n) => !n.isRead).length;
-            print('');
-            print('🔢 Manual unread count (from list): $manualUnreadCount');
-            
+        if (data['notifications'] != null && data['notifications'] is List) {
+          _allNotifications = (data['notifications'] as List)
+              .map((json) => NotificationModel.fromJson(json))
+              .toList();
+          
+          print('📊 Loaded ${_allNotifications.length} notifications');
+          
+          // Apply current filter
+          _applyFilter(_currentFilter);
+          
+          // ✅ LẤY UNREAD COUNT TỪ API
+          if (data.containsKey('unreadCount')) {
+            _unreadCount = data['unreadCount'] is int 
+                ? data['unreadCount'] 
+                : int.tryParse(data['unreadCount'].toString()) ?? 0;
           } else {
-            print('❌ ERROR: "notifications" is not a List!');
-            print('❌ Type: ${data['notifications'].runtimeType}');
+            // Fallback: count from list
+            _unreadCount = _allNotifications.where((n) => !n.isRead).length;
           }
+          
+          print('🔔 Unread count: $_unreadCount');
+          
+          // Debug: Show notification types
+          final typeCounts = <String, int>{};
+          for (var n in _allNotifications) {
+            final typeStr = n.type.toString().split('.').last;
+            typeCounts[typeStr] = (typeCounts[typeStr] ?? 0) + 1;
+          }
+          print('📋 Types: $typeCounts');
+          
         } else {
-          print('❌ ERROR: "notifications" is null!');
+          print('⚠️ No notifications in response');
+          _allNotifications = [];
+          _applyFilter(_currentFilter);
+          _unreadCount = 0;
         }
         
-        // Get unreadCount from response
-if (data.containsKey('unreadCount')) {
-  final apiUnreadCount = data['unreadCount'];
-  print('✅ unreadCount from API: $apiUnreadCount (type: ${apiUnreadCount.runtimeType})');
-  
-  // ✅ FIX: So sánh với manual count
-  final manualCount = _notifications.where((n) => !n.isRead).length;
-  
-  if (apiUnreadCount == 0 && manualCount > 0) {
-    print('⚠️ WARNING: API returned 0 but list has $manualCount unread');
-    print('🔄 Using manual count instead of API count');
-    _unreadCount = manualCount; // ← Dùng manual count
-  } else {
-    _unreadCount = apiUnreadCount is int ? apiUnreadCount : (apiUnreadCount ?? 0);
-  }
-} else {
-  print('⚠️ WARNING: No "unreadCount" in response');
-  // Fallback: count from list
-  _unreadCount = _notifications.where((n) => !n.isRead).length;
-  print('🔄 Using fallback unreadCount: $_unreadCount');
-}
-        
-        print('');
-        print('🎯 FINAL unreadCount: $_unreadCount');
-        print('🎯 FINAL notifications length: ${_notifications.length}');
-      } else {
-        print('❌ Unexpected status code: ${response.statusCode}');
+        print('📡 ========== FETCH NOTIFICATIONS END ==========\n');
       }
-    } catch (e, stackTrace) {
-      _error = e.toString();
-      print('❌ ❌ ❌ ERROR OCCURRED ❌ ❌ ❌');
-      print('❌ Error: $e');
-      print('❌ Stack trace: $stackTrace');
+    } catch (e) {
+      _error = 'Không thể tải thông báo';
+      print('❌ Fetch notifications error: $e\n');
     } finally {
       _isLoading = false;
       notifyListeners();
-      print('🔄 ==================== FETCH NOTIFICATIONS END ====================');
-      print('');
     }
   }
 
-  // Mark as read
-Future<void> markAsRead(String notificationId) async {
-  try {
-    print('');
-    print('📝 ========== MARK AS READ ==========');
-    print('📝 Notification ID: $notificationId');
+  // ✅ APPLY FILTER
+  void _applyFilter(String filter) {
+    _currentFilter = filter;
     
-    // Find notification
-    final index = _notifications.indexWhere((n) => n.id == notificationId);
-    if (index == -1) {
-      print('❌ Notification not found in list');
-      return;
-    }
-    
-    final notification = _notifications[index];
-    print('📝 Title: "${notification.title}"');
-    print('📝 Type: ${notification.type}');
-    print('📝 isRead BEFORE: ${notification.isRead}');
-    
-    if (notification.isRead) {
-      print('ℹ️ Already read, skipping API call');
-      print('📝 ========== MARK AS READ END ==========\n');
-      return;
-    }
-    
-    // Call API
-    print('📡 Calling API: ${ApiConfig.notificationRead(notificationId)}');
-    final response = await _apiClient.put(
-      ApiConfig.notificationRead(notificationId),
-    );
-
-    print('✅ Response status: ${response.statusCode}');
-    print('✅ Response data: ${response.data}');
-
-    if (response.statusCode == 200) {
-      // Update in memory
-      _notifications[index] = _notifications[index].copyWith(isRead: true);
-      _unreadCount = (_unreadCount - 1).clamp(0, 999);
-      
-      print('✅ Updated in memory');
-      print('📝 isRead AFTER: true');
-      print('🔔 New unreadCount: $_unreadCount');
-      
-      notifyListeners();
+    if (filter == 'all') {
+      _notifications = _allNotifications;
     } else {
-      print('❌ Unexpected status code: ${response.statusCode}');
+      NotificationType? filterType;
+      switch (filter) {
+        case 'order':
+          filterType = NotificationType.order;
+          break;
+        case 'promotion':
+          filterType = NotificationType.promotion;
+          break;
+        case 'system':
+          filterType = NotificationType.system;
+          break;
+      }
+      
+      if (filterType != null) {
+        _notifications = _allNotifications
+            .where((n) => n.type == filterType)
+            .toList();
+      } else {
+        _notifications = _allNotifications;
+      }
+    }
+  }
+
+  // ✅ SET FILTER
+  void setFilter(String filter) {
+    print('🔄 Filter changed: $filter');
+    _applyFilter(filter);
+    notifyListeners();
+  }
+
+  // ✅ GET COUNT BY TYPE
+  int getCountByType(String type) {
+    if (type == 'all') return _allNotifications.length;
+    
+    NotificationType? filterType;
+    switch (type) {
+      case 'order':
+        filterType = NotificationType.order;
+        break;
+      case 'promotion':
+        filterType = NotificationType.promotion;
+        break;
+      case 'system':
+        filterType = NotificationType.system;
+        break;
+    }
+
+    if (filterType == null) return 0;
+    
+    return _allNotifications.where((n) => n.type == filterType).length;
+  }
+
+  // ✅ CHECK UNREAD BY TYPE
+  bool hasUnreadByType(String type) {
+    if (type == 'all') {
+      return _allNotifications.any((n) => !n.isRead);
     }
     
-    print('📝 ========== MARK AS READ END ==========\n');
-  } catch (e, stackTrace) {
-    print('❌ ❌ ❌ MARK AS READ ERROR ❌ ❌ ❌');
-    print('❌ Error: $e');
-    print('❌ Stack trace: $stackTrace');
-    print('');
-  }
-}
+    NotificationType? filterType;
+    switch (type) {
+      case 'order':
+        filterType = NotificationType.order;
+        break;
+      case 'promotion':
+        filterType = NotificationType.promotion;
+        break;
+      case 'system':
+        filterType = NotificationType.system;
+        break;
+    }
 
-  // Mark all as read
+    if (filterType == null) return false;
+    
+    return _allNotifications.any((n) => n.type == filterType && !n.isRead);
+  }
+
+  // ✅ MARK AS READ
+  Future<void> markAsRead(String notificationId) async {
+    try {
+      print('\n📝 ========== MARK AS READ ==========');
+      print('📝 Notification ID: $notificationId');
+      
+      // Find notification
+      final index = _allNotifications.indexWhere((n) => n.id == notificationId);
+      if (index == -1) {
+        print('❌ Notification not found');
+        print('📝 ========== MARK AS READ END ==========\n');
+        return;
+      }
+      
+      final notification = _allNotifications[index];
+      
+      // Skip if already read
+      if (notification.isRead) {
+        print('ℹ️ Already read, skipping');
+        print('📝 ========== MARK AS READ END ==========\n');
+        return;
+      }
+      
+      print('📝 Title: "${notification.title}"');
+      print('📝 Type: ${notification.type}');
+      
+      // Call API
+      final response = await _apiClient.put(
+        ApiConfig.notificationRead(notificationId),
+      );
+
+      if (response.statusCode == 200) {
+        // Update in memory
+        _allNotifications[index] = _allNotifications[index].copyWith(isRead: true);
+        
+        // Decrease unread count
+        if (_unreadCount > 0) {
+          _unreadCount--;
+        }
+        
+        // Re-apply filter
+        _applyFilter(_currentFilter);
+        
+        print('✅ Marked as read');
+        print('🔔 New unread count: $_unreadCount');
+        print('📝 ========== MARK AS READ END ==========\n');
+        
+        notifyListeners();
+      }
+    } catch (e) {
+      print('❌ Mark as read error: $e\n');
+      // Don't throw - just log
+    }
+  }
+
+  // ✅ MARK ALL AS READ
   Future<void> markAllAsRead() async {
     try {
-      print('📝 Marking all notifications as read...');
+      print('\n📝 ========== MARK ALL AS READ ==========');
+      
       final response = await _apiClient.put(
         ApiConfig.NOTIFICATIONS_READ_ALL,
       );
 
       if (response.statusCode == 200) {
-        _notifications = _notifications
+        // Update all notifications
+        _allNotifications = _allNotifications
             .map((n) => n.copyWith(isRead: true))
             .toList();
+        
+        // Reset unread count
         _unreadCount = 0;
-        print('✅ Marked all as read. unreadCount: 0');
+        
+        // Re-apply filter
+        _applyFilter(_currentFilter);
+        
+        print('✅ Marked all as read');
+        print('📝 ========== MARK ALL AS READ END ==========\n');
+        
         notifyListeners();
       }
     } catch (e) {
-      print('❌ Mark all as read error: $e');
+      print('❌ Mark all as read error: $e\n');
+      throw e; // Re-throw for UI to handle
     }
   }
 
-  // Delete notification
+  // ✅ DELETE NOTIFICATION
   Future<void> deleteNotification(String notificationId) async {
     try {
-      print('🗑️ Deleting notification: $notificationId');
+      print('\n🗑️ ========== DELETE NOTIFICATION ==========');
+      print('🗑️ Notification ID: $notificationId');
+      
       final response = await _apiClient.delete(
         ApiConfig.deleteNotification(notificationId),
       );
 
       if (response.statusCode == 200) {
-        final notification = _notifications.firstWhere((n) => n.id == notificationId);
-        if (!notification.isRead) {
-          _unreadCount = (_unreadCount - 1).clamp(0, 999);
+        // Find and check if unread
+        final notification = _allNotifications.firstWhere(
+          (n) => n.id == notificationId,
+          orElse: () => throw Exception('Notification not found'),
+        );
+        
+        final wasUnread = !notification.isRead;
+        
+        // Remove from list
+        _allNotifications.removeWhere((n) => n.id == notificationId);
+        
+        // Decrease unread count if was unread
+        if (wasUnread && _unreadCount > 0) {
+          _unreadCount--;
         }
-        _notifications.removeWhere((n) => n.id == notificationId);
-        print('✅ Deleted. New unreadCount: $_unreadCount');
+        
+        // Re-apply filter
+        _applyFilter(_currentFilter);
+        
+        print('✅ Deleted');
+        print('🔔 New unread count: $_unreadCount');
+        print('🗑️ ========== DELETE NOTIFICATION END ==========\n');
+        
         notifyListeners();
       }
     } catch (e) {
-      print('❌ Delete notification error: $e');
+      print('❌ Delete notification error: $e\n');
+      throw e; // Re-throw for UI to handle
     }
   }
 
-  // Get unread count (for badge)
+  // ✅ FETCH UNREAD COUNT (for badge updates)
   Future<void> fetchUnreadCount() async {
     try {
       final response = await _apiClient.get(
@@ -295,16 +304,28 @@ Future<void> markAsRead(String notificationId) async {
       );
 
       if (response.statusCode == 200) {
-        _unreadCount = response.data['count'] ?? 0;
-        print('✅ Fetched unreadCount: $_unreadCount');
+        final count = response.data['count'];
+        _unreadCount = count is int 
+            ? count 
+            : int.tryParse(count.toString()) ?? 0;
+        
+        print('🔔 Updated unread count: $_unreadCount');
         notifyListeners();
       }
     } catch (e) {
       print('❌ Fetch unread count error: $e');
+      // Don't throw - just log
     }
   }
 
+  // REFRESH
   Future<void> refresh() async {
     await fetchNotifications();
+  }
+
+  // CLEAR ERROR
+  void clearError() {
+    _error = null;
+    notifyListeners();
   }
 }

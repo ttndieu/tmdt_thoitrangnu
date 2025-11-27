@@ -6,7 +6,7 @@ export const registerService = async (data) => {
   const { name, email, password } = data;
 
   const existing = await User.findOne({ email });
-  if (existing) throw new Error("Email already exists");
+  if (existing) throw new Error("Email đã được sử dụng. Vui lòng sử dụng email khác.");
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -27,10 +27,10 @@ export const loginService = async (data) => {
   const { email, password } = data;
 
   const user = await User.findOne({ email });
-  if (!user) throw new Error("User not found");
+  if (!user) throw new Error("Email không tồn tại trong hệ thống");
 
   const match = await bcrypt.compare(password, user.password);
-  if (!match) throw new Error("Wrong password");
+  if (!match) throw new Error("Mật khẩu không chính xác. Vui lòng thử lại.");
 
   return {
     user,

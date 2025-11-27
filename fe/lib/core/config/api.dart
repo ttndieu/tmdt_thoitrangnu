@@ -2,11 +2,13 @@
 class ApiConfig {
   // nếu chạy trên mobile emulator: dùng IP máy dev hoặc tunnel.
   // ví dụ khi backend chạy local và test trên Android emulator: 10.0.2.2
-  static const String BASE_URL = "http://192.168.1.5:3000"; //chỉnh theo môi trường
+  static const String BASE_URL = "http://192.168.1.7:3000"; //chỉnh theo môi trường
   // Auth
   static const String AUTH_LOGIN = "/api/auth/login";
   static const String AUTH_REGISTER = "/api/auth/register";
   static const String USER_CHANGE_PASSWORD = "/api/user/change-password";
+  static const String AUTH_FORGOT_PASSWORD = "/api/auth/forgot-password"; 
+  static const String AUTH_RESET_PASSWORD = "/api/auth/reset-password";   
 
   // Categories
   static const String CATEGORIES = "/api/category";

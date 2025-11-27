@@ -1,16 +1,18 @@
+// lib/modules/admin/vouchers/vouchers_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../admin_provider.dart';
 
-// form popup
 import 'voucher_form_dialog.dart';
-
-// bảng dùng chung
 import '../common/common_table.dart';
-
-// confirm dialog dùng chung
 import '../common/common_confirm.dart';
 import '../common/common_notify.dart';
+
+// Format tiền theo chuẩn Việt Nam
+final moneyFmt = NumberFormat("#,###", "vi_VN");
+final percentFmt = NumberFormat("##0", "vi_VN");
 
 class VouchersPage extends StatefulWidget {
   const VouchersPage({super.key});
@@ -33,7 +35,6 @@ class VouchersPageState extends State<VouchersPage> {
     loader = load();
   }
 
-  // =============================== LOAD DATA ===============================
   Future<void> load() async {
     final admin = Provider.of<AdminProvider>(context, listen: false);
     final res = await admin.api.get("/api/voucher");
@@ -46,7 +47,6 @@ class VouchersPageState extends State<VouchersPage> {
 
   void reload() => setState(() => loader = load());
 
-  // =============================== SEARCH ===============================
   void filter(String q) {
     q = q.toLowerCase().trim();
 
@@ -60,7 +60,6 @@ class VouchersPageState extends State<VouchersPage> {
     });
   }
 
-  // =============================== UI ===============================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -91,20 +90,18 @@ class VouchersPageState extends State<VouchersPage> {
             return const Center(child: Text("Không có voucher"));
           }
 
-          // =============================== CHUẨN HÓA DATA ROWS ===============================
           final rows = vouchers.map<List<dynamic>>((v) {
             return [
               v["code"],
-              "${v["discountPercent"]}%",
-              "${v["maxDiscount"]} đ",
-              "${v["minOrderValue"]} đ",
-              "${v["quantity"]}",
+              "${percentFmt.format(v["discountPercent"] ?? 0)}%",
+              "${moneyFmt.format(v["maxDiscount"] ?? 0)} đ",
+              "${moneyFmt.format(v["minOrderValue"] ?? 0)} đ",
+              "${v["quantity"] ?? 0}",
               v["expiredAt"]?.toString().split("T")[0] ?? "",
               v["active"] == true
                   ? const Text("Đang kích hoạt", style: TextStyle(color: Colors.green))
                   : const Text("Tắt", style: TextStyle(color: Colors.red)),
-              
-              // ---- Hành động ----
+
               Row(
                 children: [
                   IconButton(

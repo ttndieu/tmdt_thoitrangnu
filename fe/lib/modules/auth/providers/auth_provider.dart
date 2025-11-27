@@ -1,5 +1,6 @@
-import 'dart:io';
+// lib/modules/auth/providers/auth_provider.dart
 
+import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:fe/core/config/api.dart';
 import 'package:fe/core/network/api_client.dart';
@@ -19,14 +20,13 @@ class AuthProvider with ChangeNotifier {
   String? message;
   UserModel? user;
 
-  // ✅ THÊM GETTERS
   bool get isAuthenticated => 
       status == AuthStatus.authenticated && user != null;
   
   bool get isAdmin => user?.role == 'admin';
   bool get isUser => user?.role == 'user';
 
-  // ✅ CHECK AUTH STATUS FROM STORAGE
+  // CHECK AUTH STATUS
   Future<void> checkAuthStatus() async {
     try {
       print('\n🔐 ========== CHECK AUTH STATUS ==========');
@@ -42,13 +42,12 @@ class AuthProvider with ChangeNotifier {
         print('✅ User authenticated from storage');
         print('👤 User: ${user?.name}');
         print('📧 Email: ${user?.email}');
-        print('🔐 ========== CHECK AUTH STATUS END ==========\n');
       } else {
         status = AuthStatus.unauthenticated;
         print('⚠️ No user in storage');
-        print('🔐 ========== CHECK AUTH STATUS END ==========\n');
       }
       
+      print('🔐 ========== CHECK AUTH STATUS END ==========\n');
       notifyListeners();
     } catch (e) {
       print('❌ Check auth status error: $e');
@@ -61,7 +60,11 @@ class AuthProvider with ChangeNotifier {
   // ========== LOGIN ==========
   Future<bool> login(String email, String password) async {
     try {
+      print('\n🔐 ========== LOGIN (FLUTTER) ==========');
+      print('📧 Email: $email');
+
       status = AuthStatus.loading;
+      message = null;
       notifyListeners();
 
       final data = await _repo.login(email, password);
@@ -70,29 +73,35 @@ class AuthProvider with ChangeNotifier {
       final userJson = data["user"];
 
       if (token == null || userJson == null) {
-        status = AuthStatus.error;
-        message = "Token hoặc User không hợp lệ từ server";
-        notifyListeners();
-        return false;
+        throw Exception("Dữ liệu trả về không hợp lệ");
       }
 
-      // Thêm token vào userJson để UserModel khởi tạo được
       userJson["token"] = token;
 
-      // Lưu storage
       await _storage.saveToken(token);
       await _storage.saveUser(userJson);
 
-      // Parse model
       user = UserModel.fromJson(userJson);
 
       status = AuthStatus.authenticated;
+      message = "Đăng nhập thành công";
+      
+      print('✅ Login successful');
+      print('👤 User: ${user?.name}');
+      print('🔐 ========== LOGIN END ==========\n');
+      
       notifyListeners();
       return true;
 
     } catch (e) {
-      message = e.toString();
+      print('❌ Login error: $e');
+      print('🔐 ========== LOGIN END ==========\n');
+
       status = AuthStatus.error;
+      
+      // ✅ PARSE ERROR MESSAGES
+      message = _parseErrorMessage(e);
+      
       notifyListeners();
       return false;
     }
@@ -101,7 +110,12 @@ class AuthProvider with ChangeNotifier {
   // ========== REGISTER ==========
   Future<bool> register(String name, String email, String password) async {
     try {
+      print('\n📝 ========== REGISTER (FLUTTER) ==========');
+      print('👤 Name: $name');
+      print('📧 Email: $email');
+
       status = AuthStatus.loading;
+      message = null;
       notifyListeners();
 
       final data = await _repo.register(name, email, password);
@@ -110,13 +124,9 @@ class AuthProvider with ChangeNotifier {
       final userJson = data["user"];
 
       if (token == null || userJson == null) {
-        status = AuthStatus.error;
-        message = "Dữ liệu trả về không hợp lệ";
-        notifyListeners();
-        return false;
+        throw Exception("Dữ liệu trả về không hợp lệ");
       }
 
-      // Thêm token
       userJson["token"] = token;
 
       await _storage.saveToken(token);
@@ -125,28 +135,72 @@ class AuthProvider with ChangeNotifier {
       user = UserModel.fromJson(userJson);
 
       status = AuthStatus.authenticated;
+      message = "Đăng ký thành công";
+      
+      print('✅ Register successful');
+      print('📝 ========== REGISTER END ==========\n');
+      
       notifyListeners();
       return true;
 
     } catch (e) {
-      message = e.toString();
+      print('❌ Register error: $e');
+      print('📝 ========== REGISTER END ==========\n');
+
       status = AuthStatus.error;
+      
+      // ✅ PARSE ERROR MESSAGES
+      message = _parseErrorMessage(e);
+      
       notifyListeners();
       return false;
     }
   }
 
-  Future<String?> uploadAvatar(File imageFile) async {
-    try {
-      print('\n📸 ========== UPLOAD AVATAR (FLUTTER) ==========');
-      print('📁 File path: ${imageFile.path}');
-
-      final token = await _storage.getToken();
-      if (token == null) {
-        throw 'Không tìm thấy token';
+  // ✅ HELPER - PARSE ERROR MESSAGES
+  String _parseErrorMessage(dynamic error) {
+    if (error is DioException) {
+      // Network errors
+      if (error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.receiveTimeout) {
+        return 'Kết nối bị timeout. Vui lòng thử lại.';
+      }
+      
+      if (error.type == DioExceptionType.connectionError) {
+        return 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.';
       }
 
-      // Tạo FormData với Dio
+      // API errors
+      if (error.response?.data != null) {
+        final data = error.response!.data;
+        
+        if (data is Map && data['message'] != null) {
+          return data['message'] as String;
+        }
+      }
+
+      return 'Có lỗi xảy ra. Vui lòng thử lại.';
+    }
+
+    // Other errors
+    final errorString = error.toString();
+    
+    // Remove "Exception: " prefix
+    if (errorString.startsWith('Exception: ')) {
+      return errorString.substring(11);
+    }
+    
+    return errorString;
+  }
+
+  // ========== UPLOAD AVATAR ==========
+  Future<String?> uploadAvatar(File imageFile) async {
+    try {
+      print('\n📸 ========== UPLOAD AVATAR ==========');
+
+      final token = await _storage.getToken();
+      if (token == null) throw 'Không tìm thấy token';
+
       String fileName = imageFile.path.split('/').last;
       FormData formData = FormData.fromMap({
         'avatar': await MultipartFile.fromFile(
@@ -155,46 +209,34 @@ class AuthProvider with ChangeNotifier {
         ),
       });
 
-      print('📤 Uploading to: ${ApiConfig.UPLOAD_AVATAR}');
-
-      // Upload với Dio
       final response = await _apiClient.post(
         ApiConfig.UPLOAD_AVATAR,
         data: formData,
       );
 
-      print('📥 Response status: ${response.statusCode}');
-      print('📥 Response data: ${response.data}');
-
       if (response.statusCode == 200) {
         final imageUrl = response.data['imageUrl'];
-        
-        print('✅ Upload success');
-        print('🖼️ Image URL: $imageUrl');
+        print('✅ Upload success: $imageUrl');
         print('📸 ========== UPLOAD AVATAR END ==========\n');
-        
         return imageUrl;
       }
 
-      print('❌ Upload failed with status: ${response.statusCode}');
       return null;
-
     } catch (e) {
       print('❌ Upload avatar error: $e');
+      print('📸 ========== UPLOAD AVATAR END ==========\n');
       return null;
     }
   }
 
+  // ========== UPDATE PROFILE ==========
   Future<bool> updateProfile({
     required String name,
     String? phone,
     String? avatar,
   }) async {
     try {
-      print('\n✏️ ========== UPDATE PROFILE (FLUTTER) ==========');
-      print('📝 Name: $name');
-      print('📞 Phone: ${phone ?? "None"}');
-      print('🖼️ Avatar: ${avatar ?? "None"}');
+      print('\n✏️ ========== UPDATE PROFILE ==========');
 
       final response = await _apiClient.put(
         ApiConfig.USER_UPDATE,
@@ -207,15 +249,12 @@ class AuthProvider with ChangeNotifier {
 
       if (response.statusCode == 200) {
         final userJson = response.data['user'];
-        userJson['token'] = user?.token; // Giữ lại token cũ
+        userJson['token'] = user?.token;
 
-        // Cập nhật storage
         await _storage.saveUser(userJson);
-
-        // Cập nhật user model
         user = UserModel.fromJson(userJson);
         
-        print('✅ Profile updated successfully');
+        print('✅ Profile updated');
         print('✏️ ========== UPDATE PROFILE END ==========\n');
         
         notifyListeners();
@@ -225,17 +264,18 @@ class AuthProvider with ChangeNotifier {
       return false;
     } catch (e) {
       print('❌ Update profile error: $e');
-      message = e.toString();
+      message = _parseErrorMessage(e);
       return false;
     }
   }
 
+  // ========== CHANGE PASSWORD ==========
   Future<bool> changePassword({
     required String oldPassword,
     required String newPassword,
   }) async {
     try {
-      print('\n🔐 ========== CHANGE PASSWORD (FLUTTER) ==========');
+      print('\n🔐 ========== CHANGE PASSWORD ==========');
 
       final response = await _apiClient.put(
         ApiConfig.USER_CHANGE_PASSWORD,
@@ -246,7 +286,7 @@ class AuthProvider with ChangeNotifier {
       );
 
       if (response.statusCode == 200) {
-        print('✅ Password changed successfully');
+        print('✅ Password changed');
         print('🔐 ========== CHANGE PASSWORD END ==========\n');
         return true;
       }
@@ -254,23 +294,24 @@ class AuthProvider with ChangeNotifier {
       return false;
     } catch (e) {
       print('❌ Change password error: $e');
+      print('🔐 ========== CHANGE PASSWORD END ==========\n');
       
-      // Extract error message
-      if (e.toString().contains('Mật khẩu cũ không chính xác')) {
-        throw 'Mật khẩu cũ không chính xác';
-      } else if (e.toString().contains('Mật khẩu mới phải có ít nhất')) {
-        throw 'Mật khẩu mới phải có ít nhất 6 ký tự';
-      }
-      
-      throw 'Không thể đổi mật khẩu. Vui lòng thử lại';
+      throw _parseErrorMessage(e);
     }
   }
 
   // ========== LOGOUT ==========
   Future<void> logout() async {
+    print('\n👋 ========== LOGOUT ==========');
+    
     await _storage.clearAll();
     user = null;
     status = AuthStatus.unauthenticated;
+    message = null;
+    
+    print('✅ Logged out');
+    print('👋 ========== LOGOUT END ==========\n');
+    
     notifyListeners();
   }
 }
