@@ -8,6 +8,7 @@ import '../constants/app_text_styles.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/cart_provider.dart';
 import '../providers/wishlist_provider.dart';
+import '../providers/order_provider.dart'; 
 import 'orders_page.dart';
 import 'addresses_page.dart';
 import 'wishlist_page.dart';
@@ -16,8 +17,23 @@ import 'cart_page.dart';
 import 'help_center_page.dart';
 import 'policies_page.dart';
 
-class ProfilePage extends StatelessWidget {
+// ✅ ĐỔI THÀNH STATEFUL WIDGET
+class ProfilePage extends StatefulWidget {
   const ProfilePage({Key? key}) : super(key: key);
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  @override
+  void initState() {
+    super.initState();
+    // LOAD ORDERS KHI VÀO TRANG
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<OrderProvider>().fetchOrders();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,226 +70,231 @@ class ProfilePage extends StatelessWidget {
   }
 
   Widget _buildHeader(BuildContext context, dynamic user, AuthProvider authProvider) {
-  return Container(
-    padding: const EdgeInsets.all(24),
-    decoration: BoxDecoration(
-      gradient: AppColors.primaryGradient,
-      boxShadow: [
-        BoxShadow(
-          color: AppColors.primary.withOpacity(0.3),
-          blurRadius: 20,
-          offset: const Offset(0, 5),
-        ),
-      ],
-    ),
-    child: Column(
-      children: [
-        Stack(
-          children: [
-            Container(
-              width: 100,
-              height: 100,
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: AppColors.primaryGradient,
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Stack(
+            children: [
+              Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 4),
+                  color: Colors.white.withOpacity(0.2),
+                ),
+                child: ClipOval(
+                  child: _buildUserAvatar(user),
+                ),
+              ),
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: GestureDetector(
+                  onTap: () async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const EditProfilePage()),
+                    );
+                    
+                    if (result == true) {
+                      authProvider.notifyListeners();
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 8,
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.camera_alt,
+                      size: 18,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            user?.name ?? 'Khách',
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            user?.email ?? 'guest@example.com',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.white.withOpacity(0.9),
+            ),
+          ),
+          const SizedBox(height: 16),
+          GestureDetector(
+            onTap: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const EditProfilePage()),
+              );
+              
+              if (result == true) {
+                authProvider.notifyListeners();
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 4),
                 color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.white, width: 1),
               ),
-              child: ClipOval(
-                child: _buildUserAvatar(user),
-              ),
-            ),
-            Positioned(
-              bottom: 0,
-              right: 0,
-              child: GestureDetector(
-                onTap: () async {
-                  // Navigate to edit profile và refresh khi quay lại
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const EditProfilePage()),
-                  );
-                  
-                  // Refresh nếu có thay đổi
-                  if (result == true) {
-                    // Force rebuild để hiển thị avatar mới
-                    authProvider.notifyListeners();
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 8,
-                      ),
-                    ],
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.edit, size: 16, color: Colors.white),
+                  SizedBox(width: 8),
+                  Text(
+                    'Chỉnh sửa hồ sơ',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.camera_alt,
-                    size: 18,
-                    color: AppColors.primary,
-                  ),
-                ),
+                ],
               ),
             ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Text(
-          user?.name ?? 'Khách',
-          style: const TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
           ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          user?.email ?? 'guest@example.com',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.white.withOpacity(0.9),
-          ),
-        ),
-        const SizedBox(height: 16),
-        GestureDetector(
-          onTap: () async {
-            final result = await Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const EditProfilePage()),
-            );
-            
-            if (result == true) {
-              authProvider.notifyListeners();
-            }
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white, width: 1),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.edit, size: 16, color: Colors.white),
-                SizedBox(width: 8),
-                Text(
-                  'Chỉnh sửa hồ sơ',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-// ✅ THÊM FUNCTION HIỂN THỊ AVATAR
-Widget _buildUserAvatar(dynamic user) {
-  if (user?.avatar != null && user!.avatar!.isNotEmpty) {
-    return Image.network(
-      user.avatar!,
-      fit: BoxFit.cover,
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) return child;
-        return Center(
-          child: CircularProgressIndicator(
-            value: loadingProgress.expectedTotalBytes != null
-                ? loadingProgress.cumulativeBytesLoaded /
-                    loadingProgress.expectedTotalBytes!
-                : null,
-            strokeWidth: 2,
-            color: Colors.white,
-          ),
-        );
-      },
-      errorBuilder: (_, __, ___) => const Icon(
-        Icons.person,
-        size: 50,
-        color: Colors.white,
+        ],
       ),
     );
   }
 
-  return const Icon(
-    Icons.person,
-    size: 50,
-    color: Colors.white,
-  );
-}
+  Widget _buildUserAvatar(dynamic user) {
+    if (user?.avatar != null && user!.avatar!.isNotEmpty) {
+      return Image.network(
+        user.avatar!,
+        fit: BoxFit.cover,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Center(
+            child: CircularProgressIndicator(
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded /
+                      loadingProgress.expectedTotalBytes!
+                  : null,
+              strokeWidth: 2,
+              color: Colors.white,
+            ),
+          );
+        },
+        errorBuilder: (_, __, ___) => const Icon(
+          Icons.person,
+          size: 50,
+          color: Colors.white,
+        ),
+      );
+    }
 
+    return const Icon(
+      Icons.person,
+      size: 50,
+      color: Colors.white,
+    );
+  }
+
+  // STAT SECTION VỚI CONSUMER
   Widget _buildStatsSection(BuildContext context) {
-  return Padding(
-    padding: const EdgeInsets.all(20),
-    child: Row(
-      children: [
-        Expanded(
-          child: _StatCard(
-            icon: Icons.shopping_bag_outlined,
-            count: '0',
-            label: 'Đơn hàng',
-            color: AppColors.primary,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const OrdersPage()),
-              );
-            },
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Row(
+        children: [
+          // ORDERS CARD - THÊM CONSUMER
+          Expanded(
+            child: Consumer<OrderProvider>(
+              builder: (context, orderProvider, _) {
+                return _StatCard(
+                  icon: Icons.shopping_bag_outlined,
+                  count: '${orderProvider.orders.length}',  
+                  label: 'Đơn hàng',
+                  color: AppColors.primary,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const OrdersPage()),
+                    );
+                  },
+                );
+              },
+            ),
           ),
-        ),
-        const SizedBox(width: 12),
-        // ✅ WISHLIST CARD
-        Expanded(
-          child: Consumer<WishlistProvider>(
-            builder: (context, wishlistProvider, _) {
-              return _StatCard(
-                icon: Icons.favorite_outline,
-                count: '${wishlistProvider.count}', // ✅ SỬ DỤNG count
-                label: 'Yêu thích',
-                color: Colors.red,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const WishlistPage()),
-                  );
-                },
-              );
-            },
+          const SizedBox(width: 12),
+          
+          // WISHLIST CARD
+          Expanded(
+            child: Consumer<WishlistProvider>(
+              builder: (context, wishlistProvider, _) {
+                return _StatCard(
+                  icon: Icons.favorite_outline,
+                  count: '${wishlistProvider.count}',
+                  label: 'Yêu thích',
+                  color: Colors.red,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const WishlistPage()),
+                    );
+                  },
+                );
+              },
+            ),
           ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Consumer<CartProvider>(
-            builder: (context, cartProvider, _) {
-              return _StatCard(
-                icon: Icons.shopping_cart_outlined,
-                count: '${cartProvider.itemCount}',
-                label: 'Giỏ hàng',
-                color: Colors.orange,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const CartPage()),
-                  );
-                },
-              );
-            },
+          const SizedBox(width: 12),
+          
+          // CART CARD
+          Expanded(
+            child: Consumer<CartProvider>(
+              builder: (context, cartProvider, _) {
+                return _StatCard(
+                  icon: Icons.shopping_cart_outlined,
+                  count: '${cartProvider.itemCount}',
+                  label: 'Giỏ hàng',
+                  color: Colors.orange,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const CartPage()),
+                    );
+                  },
+                );
+              },
+            ),
           ),
-        ),
-      ],
-    ),
-  );
-}
+        ],
+      ),
+    );
+  }
 
   Widget _buildMenuSection(BuildContext context, AuthProvider authProvider) {
     return Padding(
@@ -327,8 +348,8 @@ Widget _buildUserAvatar(dynamic user) {
                       title: 'Yêu thích',
                       subtitle: 'Sản phẩm đã lưu',
                       badge: wishlistProvider.count > 0 
-                      ? '${wishlistProvider.count}' 
-                      : null,
+                          ? '${wishlistProvider.count}' 
+                          : null,
                       onTap: () {
                         Navigator.push(
                           context,
@@ -510,6 +531,7 @@ Widget _buildUserAvatar(dynamic user) {
             onPressed: () async {
               context.read<CartProvider>().clear();
               context.read<WishlistProvider>().clear();
+              context.read<OrderProvider>().clear();  // ✅ THÊM CLEAR ORDERS
               
               await authProvider.logout();
               if (context.mounted) {
@@ -586,6 +608,7 @@ Widget _buildUserAvatar(dynamic user) {
   }
 }
 
+// _StatCard và _MenuItem GIỮ NGUYÊN...
 class _StatCard extends StatelessWidget {
   final IconData icon;
   final String count;
