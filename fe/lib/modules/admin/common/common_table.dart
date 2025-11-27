@@ -20,10 +20,21 @@ class _CommonTableState extends State<CommonTable> {
   int pageSize = 10;
   int page = 0;
 
+  /// Controller riêng → tránh lỗi ScrollPosition null
+  final ScrollController verticalCtrl = ScrollController();
+  final ScrollController horizontalCtrl = ScrollController();
+
   @override
   void initState() {
     super.initState();
     pageSize = widget.pageSizes.first;
+  }
+
+  @override
+  void dispose() {
+    verticalCtrl.dispose();
+    horizontalCtrl.dispose();
+    super.dispose();
   }
 
   List<List<dynamic>> get pagedRows {
@@ -63,7 +74,7 @@ class _CommonTableState extends State<CommonTable> {
                 items: widget.pageSizes
                     .map((s) => DropdownMenuItem(
                           value: s,
-                          child: Text("$s dòng / trang"),
+                          child: Text("$s dòng"),
                         ))
                     .toList(),
                 onChanged: (v) {
@@ -78,26 +89,29 @@ class _CommonTableState extends State<CommonTable> {
             ],
           ),
 
-          const SizedBox(height: 10),
+          // const SizedBox(height: 10),
 
           // =============== BẢNG + CUỘN DỌC + NGANG ===============
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final minWidth = constraints.maxWidth; // FULL WIDTH
+                final minWidth = constraints.maxWidth;
 
                 return Scrollbar(
+                  controller: verticalCtrl,
                   thumbVisibility: true,
                   child: SingleChildScrollView(
-                    scrollDirection: Axis.vertical, // CUỘN DỌC
+                    controller: verticalCtrl,
+                    scrollDirection: Axis.vertical,
 
                     child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal, // CUỘN NGANG
+                      controller: horizontalCtrl,
+                      scrollDirection: Axis.horizontal,
 
                       child: ConstrainedBox(
                         constraints: BoxConstraints(
-                          minWidth: minWidth,          // full width
-                          maxWidth: double.infinity,   // cho phép rộng nếu có nhiều cột
+                          minWidth: minWidth,
+                          maxWidth: double.infinity,
                         ),
 
                         child: DataTable(
@@ -105,8 +119,9 @@ class _CommonTableState extends State<CommonTable> {
                           dataRowMinHeight: 56,
                           dataRowMaxHeight: 64,
 
-                          headingRowColor:
-                              WidgetStateProperty.all(theme.primary.withOpacity(0.12)),
+                          headingRowColor: WidgetStateProperty.all(
+                            theme.primary.withOpacity(0.12),
+                          ),
                           headingTextStyle: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: theme.primary,
@@ -152,8 +167,10 @@ class _CommonTableState extends State<CommonTable> {
                 icon: const Icon(Icons.chevron_left),
                 onPressed: page > 0 ? () => setState(() => page--) : null,
               ),
-              Text("Trang ${page + 1} / $totalPages",
-                  style: const TextStyle(fontWeight: FontWeight.w600)),
+              Text(
+                "Trang ${page + 1} / $totalPages",
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
               IconButton(
                 icon: const Icon(Icons.chevron_right),
                 onPressed:

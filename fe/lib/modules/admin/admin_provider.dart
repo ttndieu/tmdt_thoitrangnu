@@ -1,4 +1,5 @@
 // lib/modules/admin/admin_provider.dart
+
 import 'package:flutter/material.dart';
 import '../../core/network/api_client.dart';
 import '../../modules/auth/providers/auth_provider.dart';
@@ -16,15 +17,14 @@ class AdminProvider with ChangeNotifier {
   bool get isAdmin => auth.user?.role == "admin";
   String? get token => auth.user?.token;
 
-  // ====== SIDEBAR COLLAPSE SUPPORT ======
+  // SIDEBAR
   bool isSidebarCollapsed = false;
-
   void toggleSidebar() {
     isSidebarCollapsed = !isSidebarCollapsed;
     notifyListeners();
   }
 
-  // PRODUCT DETAIL / FORM SUPPORT
+  // ========================= PRODUCTS =========================
   String? selectedProductId;
   String? editingProductId;
   Map<String, dynamic>? editingProductData;
@@ -50,40 +50,7 @@ class AdminProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void changeRoute(String route) {
-    _currentRoute = route;
-
-    // reset editing when leaving form/detail
-    if (route != AdminRoutes.productDetail) selectedProductId = null;
-    if (route != AdminRoutes.productForm) {
-      editingProductId = null;
-      editingProductData = null;
-    }
-
-    if (route != AdminRoutes.userDetail) selectedUserId = null;
-    if (route != AdminRoutes.userForm) editingUser = null;
-
-    notifyListeners();
-  }
-
-  Future<void> logout(BuildContext context) async {
-    await auth.logout();
-    _currentRoute = AdminRoutes.dashboard;
-    selectedProductId = null;
-    editingProductId = null;
-    editingProductData = null;
-
-    selectedUserId = null;
-    editingUser = null;
-
-    notifyListeners();
-
-    if (context.mounted) {
-      Navigator.of(context).pushNamedAndRemoveUntil('/login', (r) => false);
-    }
-  }
-
-  // USER DETAIL / FORM SUPPORT
+  // ========================= USERS =========================
   String? selectedUserId;
   Map<String, dynamic>? editingUser;
 
@@ -104,5 +71,68 @@ class AdminProvider with ChangeNotifier {
     editingUser = null;
     _currentRoute = AdminRoutes.users;
     notifyListeners();
+  }
+
+  // ========================= ORDERS =========================
+  Map<String, dynamic>? selectedOrder;
+
+  void openOrderDetail(Map<String, dynamic> order) {
+    selectedOrder = order;
+    _currentRoute = AdminRoutes.orderDetail;
+    notifyListeners();
+  }
+
+  /// Load lại đơn hàng sau khi cập nhật trạng thái
+  Future<void> refreshOrder(String id) async {
+    try {
+      final res = await api.get("/api/orders/$id/admin");
+      selectedOrder = res.data["order"];
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  void backToOrders() {
+    selectedOrder = null;
+    _currentRoute = AdminRoutes.orders;
+    notifyListeners();
+  }
+
+  // ========================= ROUTE HANDLING =========================
+  void changeRoute(String route) {
+    _currentRoute = route;
+
+    if (route != AdminRoutes.productDetail) selectedProductId = null;
+    if (route != AdminRoutes.productForm) {
+      editingProductId = null;
+      editingProductData = null;
+    }
+
+    if (route != AdminRoutes.userDetail) selectedUserId = null;
+    if (route != AdminRoutes.userForm) editingUser = null;
+
+    if (route != AdminRoutes.orderDetail) selectedOrder = null;
+
+    notifyListeners();
+  }
+
+  // ========================= LOGOUT =========================
+  Future<void> logout(BuildContext context) async {
+    await auth.logout();
+    _currentRoute = AdminRoutes.dashboard;
+
+    selectedProductId = null;
+    editingProductId = null;
+    editingProductData = null;
+
+    selectedUserId = null;
+    editingUser = null;
+
+    selectedOrder = null;
+
+    notifyListeners();
+
+    if (context.mounted) {
+      Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
+    }
   }
 }

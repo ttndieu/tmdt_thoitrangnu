@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../admin_provider.dart';
+import '../admin_routes.dart';
 import '../common/common_card.dart';
 import '../common/common_confirm.dart';
 import '../common/common_notify.dart';
 import '../common/common_gap.dart';
+import '../products/products_page.dart';
 
 class CategoriesPage extends StatefulWidget {
   const CategoriesPage({super.key});
@@ -35,7 +37,7 @@ class CategoriesPageState extends State<CategoriesPage> {
     super.dispose();
   }
 
-  // ---------------- LOAD ----------------
+  // ================= LOAD API =================
   Future<void> load() async {
     final admin = Provider.of<AdminProvider>(context, listen: false);
     final res = await admin.api.get("/api/category");
@@ -51,20 +53,19 @@ class CategoriesPageState extends State<CategoriesPage> {
     setState(() {});
   }
 
-  // ---------------- FILTER (AdminHomePage gọi) ----------------
+  // ================= FILTER USED BY HEADER SEARCH =================
   void filter(String q) {
     q = q.trim().toLowerCase();
     setState(() {
       categories = q.isEmpty
           ? List.from(original)
           : original.where((c) {
-              final name = c["name"].toString().toLowerCase();
-              return name.contains(q);
+              return c["name"].toString().toLowerCase().contains(q);
             }).toList();
     });
   }
 
-  // ---------------- POPUP FORM + CONFIRM ----------------
+  // ================= OPEN CREATE / UPDATE FORM =================
   Future<void> openForm({Map<String, dynamic>? item}) async {
     final nameCtrl = TextEditingController(text: item?["name"] ?? "");
 
@@ -85,7 +86,7 @@ class CategoriesPageState extends State<CategoriesPage> {
 
     if (ok != true) return;
 
-    // Xác nhận lưu
+    // Confirm save
     final confirm = await showConfirmDialog(
       context,
       title: item == null ? "Tạo danh mục mới?" : "Cập nhật danh mục?",
@@ -114,14 +115,13 @@ class CategoriesPageState extends State<CategoriesPage> {
     }
   }
 
-  // ---------------- UI: CARD GRID ----------------
+  // ================= BUILD CARD GRID =================
   Widget buildCards() {
     final width = MediaQuery.of(context).size.width;
 
-    // Tự động chọn số card / hàng
     int cross = 1;
-    if (width >= 900) cross = 3;      // Desktop
-    else if (width >= 600) cross = 2; // Tablet
+    if (width >= 900) cross = 3;
+    else if (width >= 600) cross = 2;
 
     return GridView.builder(
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -134,53 +134,64 @@ class CategoriesPageState extends State<CategoriesPage> {
       itemBuilder: (_, i) {
         final c = categories[i];
 
-        return CommonCard(
-          color: const Color.fromARGB(255, 226, 226, 226),
-          child: Row(
-            children: [
-              const Icon(Icons.folder, size: 30, color: Color.fromARGB(255, 254, 221, 129)),
-              G.w12,
-              Expanded(
-                child: Text(
-                  c["name"],
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        return InkWell(
+          onTap: () {
+            final admin = Provider.of<AdminProvider>(context, listen: false);
+
+            // 1️⃣ chuyển sang trang sản phẩm
+            admin.changeRoute(AdminRoutes.products);
+
+            // 2️⃣ Ghi nhớ slug để ProductsPage filter khi load xong
+            ProductsPageState.pendingCategory = c["slug"];
+          },
+          child: CommonCard(
+            color: const Color(0xFFE6E8FF),
+            child: Row(
+              children: [
+                const Icon(Icons.folder, size: 30, color: Color.fromARGB(255, 120, 156, 222)),
+                G.w12,
+                Expanded(
+                  child: Text(
+                    c["name"],
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
                 ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.edit, color: Colors.blue),
-                onPressed: () => openForm(item: c),
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red),
-                onPressed: () async {
-                  final ok = await showConfirmDialog(
-                    context,
-                    title: "Xóa danh mục?",
-                    message: "Bạn có chắc muốn xóa '${c["name"]}'?",
-                    confirmColor: Colors.red,
-                    confirmText: "Xóa",
-                  );
+                IconButton(
+                  icon: const Icon(Icons.edit, color: Colors.blue),
+                  onPressed: () => openForm(item: c),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  onPressed: () async {
+                    final ok = await showConfirmDialog(
+                      context,
+                      title: "Xóa danh mục?",
+                      message: "Bạn có chắc muốn xóa '${c["name"]}'?",
+                      confirmColor: Colors.red,
+                      confirmText: "Xóa",
+                    );
 
-                  if (!ok) return;
+                    if (!ok) return;
 
-                  try {
-                    final admin = Provider.of<AdminProvider>(context, listen: false);
-                    await admin.api.delete("/api/category/${c["_id"]}");
-                    showSuccess(context, "Đã xóa danh mục");
-                    reload();
-                  } catch (e) {
-                    showError(context, "Lỗi: $e");
-                  }
-                },
-              ),
-            ],
+                    try {
+                      final admin = Provider.of<AdminProvider>(context, listen: false);
+                      await admin.api.delete("/api/category/${c["_id"]}");
+                      showSuccess(context, "Đã xóa danh mục");
+                      reload();
+                    } catch (e) {
+                      showError(context, "Lỗi: $e");
+                    }
+                  },
+                ),
+              ],
+            ),
           ),
         );
       },
     );
   }
 
-  // ---------------- BUILD ----------------
+  // ================= BUILD =================
   @override
   Widget build(BuildContext context) {
     return Scaffold(

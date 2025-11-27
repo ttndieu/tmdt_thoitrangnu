@@ -30,6 +30,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
@@ -58,6 +59,7 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Fashion App',
+        
         theme: ThemeData(primarySwatch: Colors.pink),
         initialRoute: AppRoutes.login,
         routes: {
