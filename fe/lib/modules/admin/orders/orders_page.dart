@@ -17,6 +17,19 @@ class OrdersPageState extends State<OrdersPage> {
 
   List<dynamic> orders = [];
   List<dynamic> original = [];
+
+  // 🔥 NEW — lọc theo trạng thái
+  String selectedStatus = "";
+
+  // 🔥 NEW — danh sách trạng thái
+  final List<String> statusList = [
+    "pending",
+    "confirmed",
+    "shipping",
+    "completed",
+    "cancelled"
+  ];
+
   late Future loader;
 
   @override
@@ -35,28 +48,54 @@ class OrdersPageState extends State<OrdersPage> {
   Future<void> load() async {
     final admin = Provider.of<AdminProvider>(context, listen: false);
     final res = await admin.api.get("/api/orders/admin/all");
-    setState(() {
-      original = List.from(res.data["orders"] ?? []);
-      orders = List.from(original);
-    });
+
+    original = List.from(res.data["orders"] ?? []);
+    orders = List.from(original);
+
+    // nếu có trạng thái đang chọn → áp dụng lọc
+    if (selectedStatus.isNotEmpty) {
+      _applyFilter();
+    }
+
+    setState(() {});
   }
 
-  /// public reload để các page khác có thể gọi khi cần load lại data
+  /// cho các page khác gọi reload
   void reload() => setState(() => loader = load());
+
+  // ================= FILTER =================
 
   void filter(String q) {
     q = q.toLowerCase().trim();
-    setState(() {
-      orders = q.isEmpty
-          ? List.from(original)
-          : original.where((o) {
-              final id = (o["_id"] ?? "").toString();
-              final shortId = id.length >= 6 ? id.substring(id.length - 6) : id;
-              final name = (o["user"]?["name"] ?? "").toString().toLowerCase();
-              final status = (o["status"] ?? "").toString().toLowerCase();
-              return id.contains(q) || shortId.contains(q) || name.contains(q) || status.contains(q);
-            }).toList();
-    });
+    orders = original.where((o) {
+      final id = o["_id"]?.toString() ?? "";
+      final shortId = id.length >= 6 ? id.substring(id.length - 6) : id;
+      final name = (o["user"]?["name"] ?? "").toString().toLowerCase();
+      final status = (o["status"] ?? "").toLowerCase();
+      return id.contains(q) || shortId.contains(q) || name.contains(q) || status.contains(q);
+    }).toList();
+
+    _applyFilter(); // vẫn áp dụng filter trạng thái
+    setState(() {});
+  }
+
+  // 🔥 Lọc theo trạng thái
+  void filterByStatus(String? s) {
+    selectedStatus = s ?? "";
+    _applyFilter();
+    setState(() {});
+  }
+
+  // 🔥 áp dụng tất cả filter
+  void _applyFilter() {
+    orders = original.where((o) {
+      final status = (o["status"] ?? "").toString();
+
+      final matchStatus =
+          selectedStatus.isEmpty ? true : status == selectedStatus;
+
+      return matchStatus;
+    }).toList();
   }
 
   String _shortId(String? id) {
@@ -86,7 +125,11 @@ class OrdersPageState extends State<OrdersPage> {
       default:
         c = Colors.grey;
     }
-    return Chip(label: Text(s), backgroundColor: c.withOpacity(0.12), labelStyle: TextStyle(color: c));
+    return Chip(
+      label: Text(s),
+      backgroundColor: c.withOpacity(0.12),
+      labelStyle: TextStyle(color: c),
+    );
   }
 
   @override
@@ -105,50 +148,81 @@ class OrdersPageState extends State<OrdersPage> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (orders.isEmpty) {
-            return const Center(child: Text("Không có đơn hàng"));
-          }
-
-          final rows = orders.map<List<dynamic>>((o) {
-            final id = o["_id"]?.toString() ?? "";
-            final short = _shortId(id);
-            final userName = o["user"]?["name"] ?? "—";
-            final status = o["status"]?.toString() ?? "";
-            final total = o["totalAmount"]?.toString() ?? "0";
-            final date = (o["createdAt"]?.toString() ?? "").substring(0, 10);
-
-            final actions = Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.visibility),
-                  onPressed: () {
-                    Provider.of<AdminProvider>(context, listen: false).openOrderDetail(o);
-                  },
-                ),
-              ],
-            );
-
-            if (isNarrow) {
-              return [short, userName, "${total}đ", actions];
-            }
-
-            return [
-              short,
-              userName,
-              _statusChip(status),
-              "${total}đ",
-              date,
-              actions,
-            ];
-          }).toList();
-
           return Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
+                // ===================================================
+                // 🔥 UI FILTER TRẠNG THÁI
+                // ===================================================
+                Row(
+                  children: [
+                    DropdownButton<String>(
+                      value: selectedStatus.isEmpty ? null : selectedStatus,
+                      hint: const Text("Tất cả trạng thái"),
+                      items: [
+                        const DropdownMenuItem(
+                          value: "",
+                          child: Text("Tất cả trạng thái"),
+                        ),
+                        ...statusList.map((s) => DropdownMenuItem(
+                              value: s,
+                              child: Text(s),
+                            )),
+                      ],
+                      onChanged: filterByStatus,
+                    ),
+
+                    if (selectedStatus.isNotEmpty)
+                      TextButton(
+                        onPressed: () => filterByStatus(""),
+                        child: const Text("Xóa lọc"),
+                      ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // ===================================================
+                // TABLE
+                // ===================================================
                 Expanded(
-                  child: CommonTable(columns: columns, rows: rows),
+                  child: orders.isEmpty
+                      ? const Center(child: Text("Không có đơn hàng"))
+                      : CommonTable(columns: columns, rows: orders.map<List<dynamic>>((o) {
+                          final id = o["_id"]?.toString() ?? "";
+                          final short = _shortId(id);
+                          final userName = o["user"]?["name"] ?? "—";
+                          final status = o["status"]?.toString() ?? "";
+                          final total = o["totalAmount"]?.toString() ?? "0";
+                          final date = (o["createdAt"]?.toString() ?? "").substring(0, 10);
+
+                          final actions = Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.visibility),
+                                onPressed: () {
+                                  Provider.of<AdminProvider>(context, listen: false)
+                                      .openOrderDetail(o);
+                                },
+                              ),
+                            ],
+                          );
+
+                          if (isNarrow) {
+                            return [short, userName, "${total}đ", actions];
+                          }
+
+                          return [
+                            short,
+                            userName,
+                            _statusChip(status),
+                            "${total}đ",
+                            date,
+                            actions,
+                          ];
+                        }).toList()),
                 ),
               ],
             ),

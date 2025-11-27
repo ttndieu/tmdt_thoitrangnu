@@ -105,11 +105,15 @@ class _OrderDetailAdminState extends State<OrderDetailAdmin> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(item["product"]["name"],
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w600)),
                               Text(
-                                  "SL: ${item["quantity"]} | ${item["size"]}/${item["color"]}"),
+                                item["product"]["name"],
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Text(
+                                "SL: ${item["quantity"]} | ${item["size"]}/${item["color"]}",
+                              ),
                             ],
                           ),
                         ),
@@ -164,6 +168,27 @@ class _OrderDetailAdminState extends State<OrderDetailAdmin> {
               ],
             ),
           ),
+          _section(
+            "Xuất hoá đơn",
+            ElevatedButton.icon(
+              icon: const Icon(Icons.picture_as_pdf),
+              label: const Text("Xuất hoá đơn"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(150, 42),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              onPressed: () {
+                Provider.of<AdminProvider>(
+                  context,
+                  listen: false,
+                ).exportInvoice(order);
+              },
+            ),
+          ),
 
           G.h20,
         ],
@@ -177,11 +202,10 @@ class _OrderDetailAdminState extends State<OrderDetailAdmin> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              )),
+          Text(
+            title,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
           G.h8,
           child,
         ],

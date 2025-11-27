@@ -10,7 +10,6 @@ import 'widgets/admin_sidebar.dart';
 import 'widgets/admin_header.dart';
 
 // Pages
-import 'dashboard/dashboard_page.dart';
 import 'products/products_page.dart';
 import 'products/product_form_page.dart';
 import 'products/product_detail_admin.dart';
