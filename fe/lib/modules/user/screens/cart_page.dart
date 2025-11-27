@@ -6,6 +6,7 @@ import '../constants/app_color.dart';
 import '../constants/app_text_styles.dart';
 import '../providers/cart_provider.dart';
 import 'checkout_page.dart';
+import 'package:fe/core/utils/currency_formatter.dart';
 
 class CartPage extends StatelessWidget {
   const CartPage({Key? key}) : super(key: key);
@@ -143,8 +144,7 @@ class CartPage extends StatelessWidget {
                                   // ✅ Price và Quantity trong 1 Row
                                   Row(
                                     children: [
-                                      Text(
-                                        '${item.price.toStringAsFixed(0)}đ',
+                                      Text(item.price.toCurrency(),
                                         style: AppTextStyles.bodyMedium.copyWith(
                                           fontWeight: FontWeight.bold,
                                           color: AppColors.primary,
@@ -332,8 +332,7 @@ class CartPage extends StatelessWidget {
                     'Tổng tiền ($selectedCount sản phẩm)',
                     style: AppTextStyles.bodySmall,
                   ),
-                  Text(
-                    '${total.toStringAsFixed(0)}đ',
+                  Text(total.toCurrency(),
                     style: AppTextStyles.h2.copyWith(color: AppColors.primary),
                   ),
                 ],

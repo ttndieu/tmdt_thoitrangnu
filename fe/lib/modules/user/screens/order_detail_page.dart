@@ -12,6 +12,7 @@ import '../providers/review_provider.dart';
 import '../constants/app_color.dart';
 import '../constants/app_text_styles.dart';
 import 'add_review_page.dart';
+import 'package:fe/core/utils/currency_formatter.dart';
 
 class OrderDetailPage extends StatefulWidget {
   final String orderId;
@@ -409,7 +410,7 @@ Widget _buildOrderItems() {
                                     ),
                                     const Spacer(),
                                     Text(
-                                      '${item.subtotal.toStringAsFixed(0)}đ',
+                                      '${item.subtotal.toCurrency()}',
                                       style: AppTextStyles.bodyMedium.copyWith(
                                         fontWeight: FontWeight.bold,
                                         color: AppColors.primary,
@@ -625,7 +626,7 @@ Widget _buildOrderItems() {
                   ],
                 ),
                 Text(
-                  '-${discount.toStringAsFixed(0)}đ',
+                  '-${discount.toCurrency()}',
                   style: AppTextStyles.bodyMedium.copyWith(
                     fontWeight: FontWeight.bold,
                     color: AppColors.error,
@@ -669,7 +670,7 @@ Widget _buildOrderItems() {
                   const SizedBox(width: 8),
                   Flexible(
                     child: Text(
-                      'Đã tiết kiệm ${discount.toStringAsFixed(0)}đ với mã ${_order!.voucherCode}',
+                      'Đã tiết kiệm ${discount.toCurrency()} với mã ${_order!.voucherCode}',
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -972,8 +973,7 @@ Future<void> _navigateToProductDetail(String productId) async {
                   color: AppColors.textSecondary,
                 ),
         ),
-        Text(
-          '${amount.toStringAsFixed(0)}đ',
+        Text(amount.toCurrency(),
           style: isTotal
               ? AppTextStyles.h2.copyWith(color: AppColors.primary)
               : AppTextStyles.bodyMedium.copyWith(

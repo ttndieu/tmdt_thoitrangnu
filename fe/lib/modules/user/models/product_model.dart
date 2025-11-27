@@ -1,5 +1,7 @@
 // lib/modules/user/models/product_model.dart
 
+import 'package:fe/core/utils/currency_formatter.dart';
+
 class ProductModel {
   final String id;
   final String name;
@@ -79,9 +81,9 @@ class ProductModel {
 
   String get priceDisplay {
     if (minPrice == maxPrice) {
-      return '${maxPrice.toStringAsFixed(0)}đ';
+      return maxPrice.toCurrency();  // "450.000đ" thay vì "450000đ"
     }
-    return '${minPrice.toStringAsFixed(0)}đ - ${maxPrice.toStringAsFixed(0)}đ';
+    return '${minPrice.toCurrency()} - ${maxPrice.toCurrency()}';  // "450.000đ - 500.000đ"
   }
 
   bool get hasReviews => reviewCount > 0;

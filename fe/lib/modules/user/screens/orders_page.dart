@@ -7,6 +7,7 @@ import '../constants/app_text_styles.dart';
 import '../models/order_model.dart';
 import '../providers/order_provider.dart';
 import 'order_detail_page.dart';
+import 'package:fe/core/utils/currency_formatter.dart';
 
 class OrdersPage extends StatefulWidget {
   const OrdersPage({Key? key}) : super(key: key);
@@ -385,8 +386,7 @@ class _OrderCard extends StatelessWidget {
                       color: AppColors.textSecondary,
                     ),
                   ),
-                  Text(
-                    '${total.toStringAsFixed(0)}đ',
+                  Text(total.toCurrency(),
                     style: AppTextStyles.h3.copyWith(color: AppColors.primary),
                   ),
                 ],

@@ -6,6 +6,7 @@ import '../constants/app_color.dart';
 import '../constants/app_text_styles.dart';
 import 'order_detail_page.dart';
 import 'orders_page.dart';
+import 'package:fe/core/utils/currency_formatter.dart';
 
 class OrderSuccessPage extends StatelessWidget {
   final OrderModel order;
@@ -97,7 +98,7 @@ class OrderSuccessPage extends StatelessWidget {
                           const Divider(height: 24),
                           _buildInfoRow(
                             'Tổng tiền',
-                            '${order.totalAmount.toStringAsFixed(0)}đ',
+                            '${order.totalAmount.toCurrency()}đ',
                             valueColor: AppColors.primary,
                             isBold: true,
                           ),
