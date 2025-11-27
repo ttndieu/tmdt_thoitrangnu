@@ -1,5 +1,7 @@
 // lib/modules/user/screens/home_page.dart
 
+import 'package:fe/modules/user/providers/notification_provider.dart';
+import 'package:fe/modules/user/screens/notifications_page.dart';
 import 'package:fe/modules/user/screens/product_detail_page.dart.dart';
 import 'package:fe/modules/user/widgets/home/product_grid.dart';
 import 'package:flutter/material.dart';
@@ -14,7 +16,7 @@ import '../../auth/providers/auth_provider.dart';
 import '../widgets/home/home_app_bar.dart';
 import '../widgets/home/featured_product_card.dart';
 import '../widgets/home/category_chips.dart';
-import 'cart_page.dart'; 
+import 'cart_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -36,7 +38,8 @@ class _HomePageState extends State<HomePage>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
       context.read<WishlistProvider>().fetchWishlist();
-      context.read<CartProvider>().fetchCart(); // ✅ THÊM
+      context.read<CartProvider>().fetchCart();
+      context.read<NotificationProvider>().fetchNotifications();
     });
   }
 
@@ -67,37 +70,52 @@ class _HomePageState extends State<HomePage>
             return RefreshIndicator(
               onRefresh: () async {
                 await _loadData();
-                await context.read<CartProvider>().fetchCart(); // ✅ THÊM
+                await context.read<CartProvider>().fetchCart();
+                await context.read<NotificationProvider>().fetchNotifications();
               },
               color: AppColors.primary,
               child: CustomScrollView(
                 slivers: [
-                  // ✅ SỬA: Custom App Bar với CartProvider
+                  // SỬA: Custom App Bar với CartProvider
                   SliverToBoxAdapter(
-                    child: Consumer<CartProvider>(
-                      builder: (context, cartProvider, _) {
-                        return HomeAppBar(
-                          userName: userName,
-                          avatarUrl: avatarUrl,
-                          cartCount: cartProvider.itemCount,
-                          notificationCount: 0,
-                          onCartTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const CartPage(),
-                              ),
-                            );
-                          },
-                          onNotificationTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('🔔 Tính năng thông báo đang phát triển'),
-                              ),
-                            );
-                          },
-                        );
-                      },
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Consumer<CartProvider>(
+                            builder: (context, cartProvider, _) {
+                              return Consumer<NotificationProvider>(
+                                builder: (context, notificationProvider, _) {
+                                  return HomeAppBar(
+                                    userName: userName,
+                                    avatarUrl: avatarUrl,
+                                    cartCount: cartProvider.itemCount,
+                                    notificationCount:
+                                        notificationProvider.unreadCount,
+                                    onCartTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const CartPage(),
+                                        ),
+                                      );
+                                    },
+                                    onNotificationTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const NotificationsPage(),
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                   ),
 
@@ -180,9 +198,7 @@ class _HomePageState extends State<HomePage>
                     _buildProductsGrid(provider),
 
                   // Bottom Padding
-                  const SliverToBoxAdapter(
-                    child: SizedBox(height: 24),
-                  ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
                 ],
               ),
             );
@@ -234,10 +250,7 @@ class _HomePageState extends State<HomePage>
         children: [
           const Padding(
             padding: EdgeInsets.fromLTRB(20, 24, 20, 12),
-            child: Text(
-              '✨ Sản phẩm nổi bật',
-              style: AppTextStyles.h2,
-            ),
+            child: Text('✨ Sản phẩm nổi bật', style: AppTextStyles.h2),
           ),
           SizedBox(
             height: 200,
@@ -274,10 +287,7 @@ class _HomePageState extends State<HomePage>
         children: [
           const Padding(
             padding: EdgeInsets.fromLTRB(20, 24, 20, 12),
-            child: Text(
-              'Danh mục',
-              style: AppTextStyles.h2,
-            ),
+            child: Text('Danh mục', style: AppTextStyles.h2),
           ),
           SizedBox(
             height: 50,
@@ -302,8 +312,7 @@ class _HomePageState extends State<HomePage>
                   padding: const EdgeInsets.only(right: 8),
                   child: CategoryChip(
                     label: category.name,
-                    isSelected:
-                        provider.selectedCategorySlug == category.slug,
+                    isSelected: provider.selectedCategorySlug == category.slug,
                     onTap: () => provider.filterByCategory(category.slug),
                   ),
                 );
@@ -325,23 +334,20 @@ class _HomePageState extends State<HomePage>
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
         ),
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            final product = provider.products[index];
-            return ProductCard(
-              product: product,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ProductDetailPage(product: product),
-                  ),
-                );
-              },
-            );
-          },
-          childCount: provider.products.length,
-        ),
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final product = provider.products[index];
+          return ProductCard(
+            product: product,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ProductDetailPage(product: product),
+                ),
+              );
+            },
+          );
+        }, childCount: provider.products.length),
       ),
     );
   }
@@ -352,11 +358,7 @@ class _HomePageState extends State<HomePage>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.error_outline,
-              size: 64,
-              color: AppColors.error,
-            ),
+            const Icon(Icons.error_outline, size: 64, color: AppColors.error),
             const SizedBox(height: 16),
             const Text('Có lỗi xảy ra', style: AppTextStyles.h2),
             const SizedBox(height: 8),
@@ -394,9 +396,7 @@ class _HomePageState extends State<HomePage>
             const SizedBox(height: 16),
             Text(
               'Không tìm thấy sản phẩm',
-              style: AppTextStyles.h2.copyWith(
-                color: AppColors.textSecondary,
-              ),
+              style: AppTextStyles.h2.copyWith(color: AppColors.textSecondary),
             ),
             const SizedBox(height: 8),
             const Text(

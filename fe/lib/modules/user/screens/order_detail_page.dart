@@ -457,7 +457,7 @@ Widget _buildOrderItems() {
             Icon(Icons.check_circle, color: Colors.green, size: 18),
             SizedBox(width: 8),
             Text(
-              '✅ Đã đánh giá',
+              'Đã đánh giá',
               style: TextStyle(
                 color: Colors.green,
                 fontWeight: FontWeight.w600,
@@ -565,7 +565,7 @@ Widget _buildOrderItems() {
     final originalAmount = _order!.originalAmount ?? _order!.totalAmount;
     final discount = _order!.discount ?? 0.0;
     const shippingFee = 15000.0;
-    final finalTotal = _order!.totalAmount + shippingFee;
+    final finalTotal = _order!.totalAmount;
 
     return Container(
       padding: const EdgeInsets.all(16),

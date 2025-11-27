@@ -9,6 +9,7 @@ import {
   notifyOrderStatusChange
 } from "../services/notification.service.js";
 import Voucher from "../models/Voucher.js";
+import PaymentIntent from "../models/PaymentIntent.js";
 
 // ------------------------------------------------------
 // CREATE ORDER (USER)
@@ -19,6 +20,7 @@ export const createOrder = async (req, res) => {
 
     console.log(`\n📦 ========== CREATE ORDER ==========`);
     console.log(`👤 User: ${req.user._id}`);
+    console.log(`💳 Payment method: ${paymentMethod}`);
     console.log(`🎫 Voucher ID: ${voucherId || 'None'}`);
     console.log(`🛒 Selected Item IDs: ${selectedItemIds ? JSON.stringify(selectedItemIds) : 'All'}`);
 
@@ -30,21 +32,21 @@ export const createOrder = async (req, res) => {
     }
 
     // FILTER: Chỉ lấy items được chọn
-let itemsToOrder = cart.items;
+    let itemsToOrder = cart.items;
 
-if (selectedItemIds && Array.isArray(selectedItemIds) && selectedItemIds.length > 0) {
-  itemsToOrder = cart.items.filter(item => 
-    selectedItemIds.includes(item._id.toString())
-  );
-  
-  console.log(`✅ Filtered ${itemsToOrder.length} selected items from ${cart.items.length} total items`);
-  
-  if (itemsToOrder.length === 0) {
-    return res.status(400).json({ message: "No valid items selected" });
-  }
-} else {
-  console.log(`⚠️ No selectedItemIds provided, using all cart items`);
-}
+    if (selectedItemIds && Array.isArray(selectedItemIds) && selectedItemIds.length > 0) {
+      itemsToOrder = cart.items.filter(item => 
+        selectedItemIds.includes(item._id.toString())
+      );
+      
+      console.log(`✅ Filtered ${itemsToOrder.length} selected items from ${cart.items.length} total items`);
+      
+      if (itemsToOrder.length === 0) {
+        return res.status(400).json({ message: "No valid items selected" });
+      }
+    } else {
+      console.log(`⚠️ No selectedItemIds provided, using all cart items`);
+    }
 
     let originalAmount = 0;
 
@@ -115,28 +117,36 @@ if (selectedItemIds && Array.isArray(selectedItemIds) && selectedItemIds.length 
     const totalAmount = originalAmount - discount;
     console.log(`💵 Total amount: ${totalAmount}`);
 
-    // Trừ tồn kho VÀ tăng sold
-    for (let item of itemsToOrder) {
-    // Trừ stock của variant
-    await Product.updateOne(
-    {
-      _id: item.product._id,
-      "variants.size": item.size,
-      "variants.color": item.color
-    },
-    { $inc: { "variants.$.stock": -item.quantity } }
-  );
-  
-  // THÊM: Tăng sold count của product
-     await Product.findByIdAndUpdate(
-      item.product._id,
-      { $inc: { sold: item.quantity } }
-    );
-    
-    console.log(`Product ${item.product._id}: +${item.quantity} sold`);
-}
+    // ✅ QUAN TRỌNG: CHỈ TRỪ STOCK NẾU LÀ COD
+    // VNPay sẽ trừ stock khi callback thành công
+    if (paymentMethod === 'cod') {
+      console.log('💵 COD payment - Deducting stock now');
+      
+      // Trừ tồn kho VÀ tăng sold
+      for (let item of itemsToOrder) {
+        // Trừ stock của variant
+        await Product.updateOne(
+          {
+            _id: item.product._id,
+            "variants.size": item.size,
+            "variants.color": item.color
+          },
+          { $inc: { "variants.$.stock": -item.quantity } }
+        );
+        
+        // Tăng sold count của product
+        await Product.findByIdAndUpdate(
+          item.product._id,
+          { $inc: { sold: item.quantity } }
+        );
+        
+        console.log(`✅ Product ${item.product._id}: -${item.quantity} stock, +${item.quantity} sold`);
+      }
+    } else {
+      console.log('🏦 VNPay payment - Stock will be deducted after payment success');
+    }
 
-    // ✅ Tạo đơn hàng chỉ với items đã chọn
+    // ✅ Tạo đơn hàng với status phù hợp
     const order = await Order.create({
       user: req.user._id,
       items: itemsToOrder.map((i) => ({
@@ -155,36 +165,48 @@ if (selectedItemIds && Array.isArray(selectedItemIds) && selectedItemIds.length 
       totalAmount: totalAmount,
       paymentMethod,
       shippingAddress,
-      status: "pending"
+      status: "pending",  // ✅ Luôn là pending ban đầu
+      paymentStatus: paymentMethod === 'vnpay' ? 'pending' : 'pending',  // ✅ Cả 2 đều pending
     });
 
     // Load order với product info
     const fullOrder = await Order.findById(order._id)
-      .populate("items.product", "name")
+      .populate("items.product", "name images")
       .populate("voucher");
 
     console.log(`✅ Order created: ${order._id}`);
+    console.log(`📊 Status: ${order.status}`);
+    console.log(`💳 Payment status: ${order.paymentStatus}`);
+
+    // ✅ QUAN TRỌNG: XỬ LÝ CART DỰA TRÊN PAYMENT METHOD
+    if (paymentMethod === 'cod') {
+      // COD: Xóa items ngay
+      if (selectedItemIds && selectedItemIds.length > 0) {
+        cart.items = cart.items.filter(item => 
+          !selectedItemIds.includes(item._id.toString())
+        );
+        console.log(`🗑️ COD - Removed ${selectedItemIds.length} items from cart`);
+      } else {
+        cart.items = [];
+        console.log(`🗑️ COD - Cleared entire cart`);
+      }
+      await cart.save();
+      
+      // Gửi notification & email cho COD
+      await notifyNewOrder(req.user._id, fullOrder);
+      await sendOrderEmail(req.user.email, fullOrder);
+    } else {
+      // VNPay: GIỮ items trong cart
+      console.log(`⏳ VNPay - Items kept in cart (will be removed after payment success)`);
+      // KHÔNG gửi notification/email, sẽ gửi khi callback thành công
+    }
+
     console.log(`📦 ========== CREATE ORDER END ==========\n`);
 
-    // Notifications & Email
-    await notifyNewOrder(req.user._id, fullOrder);
-    await sendOrderEmail(req.user.email, fullOrder);
-
-    // XÓA CHỈ ITEMS ĐÃ CHỌN KHỎI CART
-if (selectedItemIds && selectedItemIds.length > 0) {
-  cart.items = cart.items.filter(item => 
-    !selectedItemIds.includes(item._id.toString())
-  );
-  console.log(`🗑️ Removed ${selectedItemIds.length} selected items from cart`);
-  console.log(`📦 Remaining items in cart: ${cart.items.length}`);
-} else {
-  cart.items = [];
-  console.log(`🗑️ Cleared entire cart`);
-}
-
-await cart.save();
-
-    return res.status(201).json({ order: fullOrder });
+    return res.status(201).json({ 
+      success: true,
+      order: fullOrder 
+    });
 
   } catch (err) {
     console.error('❌ Create order error:', err);
@@ -384,6 +406,196 @@ for (let item of order.items) {
     console.error('❌ Error stack:', err.stack);
     return res.status(500).json({ 
       message: err.message || "Lỗi server khi hủy đơn hàng"
+    });
+  }
+};
+
+/**
+ * TẠO ORDER TỪ PAYMENT INTENT
+ * POST /api/orders/create-from-intent
+ */
+export const createOrderFromIntent = async (req, res) => {
+  try {
+    const { intentId } = req.body;
+    const userId = req.user._id;
+
+    console.log("\n🎯 ========== CREATE ORDER FROM INTENT ==========");
+    console.log("👤 User:", userId);
+    console.log("🎯 Intent ID:", intentId);
+
+    if (!intentId) {
+      return res.status(400).json({
+        success: false,
+        message: "Intent ID is required",
+      });
+    }
+
+    const intent = await PaymentIntent.findById(intentId)
+      .populate("items.product")
+      .populate("voucher");
+
+    if (!intent) {
+      return res.status(404).json({
+        success: false,
+        message: "Payment intent not found",
+      });
+    }
+
+    console.log("✅ Found intent:", intent._id);
+
+    if (intent.user.toString() !== userId.toString()) {
+      console.log("❌ Unauthorized user");
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    if (intent.paymentStatus !== "paid") {
+      console.log(`❌ Intent not paid. Status: ${intent.paymentStatus}`);
+      return res.status(400).json({
+        success: false,
+        message: "Payment chưa hoàn tất",
+      });
+    }
+
+    if (intent.order) {
+      console.log(`⚠️ Order already created: ${intent.order}`);
+      const existingOrder = await Order.findById(intent.order)
+        .populate("items.product", "name images")
+        .populate("voucher");
+      
+      return res.json({
+        success: true,
+        order: existingOrder,
+        message: "Order đã được tạo trước đó",
+      });
+    }
+
+    console.log("✅ Intent validated. Creating order...");
+
+    for (let item of intent.items) {
+      const product = await Product.findById(item.product._id);
+      
+      if (!product) {
+        return res.status(400).json({
+          success: false,
+          message: `Product ${item.product.name} not found`,
+        });
+      }
+
+      const variant = product.variants.find(
+        (v) => v.size === item.size && v.color === item.color
+      );
+
+      if (!variant || variant.stock < item.quantity) {
+        return res.status(400).json({
+          success: false,
+          message: `Not enough stock for ${product.name}`,
+        });
+      }
+    }
+
+    console.log("✅ Stock validated");
+
+    console.log("📦 Deducting stock...");
+    for (let item of intent.items) {
+      try {
+        await Product.updateOne(
+          {
+            _id: item.product._id,
+            "variants.size": item.size,
+            "variants.color": item.color,
+          },
+          { $inc: { "variants.$.stock": -item.quantity } }
+        );
+
+        await Product.findByIdAndUpdate(item.product._id, {
+          $inc: { sold: item.quantity },
+        });
+
+        console.log(`✅ ${item.product.name}: -${item.quantity} stock, +${item.quantity} sold`);
+      } catch (productErr) {
+        console.error(`❌ Error updating product ${item.product._id}:`, productErr);
+      }
+    }
+
+    const order = await Order.create({
+      user: userId,
+      items: intent.items.map((item) => ({
+        product: item.product._id,
+        quantity: item.quantity,
+        size: item.size,
+        color: item.color,
+        price: item.price,
+      })),
+      voucher: intent.voucher || null,
+      voucherCode: intent.voucherCode || null,
+      discount: intent.discount,
+      originalAmount: intent.originalAmount,
+      totalAmount: intent.totalAmount,
+      paymentMethod: intent.paymentMethod,
+      shippingAddress: intent.shippingAddress,
+      status: "confirmed",
+      paymentStatus: "paid",
+    });
+
+    console.log("✅ Order created:", order._id);
+
+    intent.order = order._id;
+    await intent.save();
+
+    console.log("✅ Intent linked to order");
+
+    const fullOrder = await Order.findById(order._id)
+      .populate("items.product", "name images")
+      .populate("voucher");
+
+    console.log("🗑️ Removing items from cart...");
+    try {
+      const cart = await Cart.findOne({ user: userId });
+
+      if (cart) {
+        const orderProductIds = order.items.map((item) =>
+          item.product.toString()
+        );
+
+        const beforeCount = cart.items.length;
+        cart.items = cart.items.filter((cartItem) => {
+          const productId = cartItem.product.toString();
+          return !orderProductIds.includes(productId);
+        });
+
+        await cart.save();
+
+        const removedCount = beforeCount - cart.items.length;
+        console.log(`✅ Removed ${removedCount} items from cart`);
+      }
+    } catch (cartErr) {
+      console.error("❌ Error removing cart items:", cartErr);
+    }
+
+    console.log("📧 Sending notifications...");
+    try {
+      await sendOrderEmail(req.user.email, fullOrder);
+      await notifyNewOrder(userId, fullOrder);
+      console.log("✅ Notifications sent");
+    } catch (notifyErr) {
+      console.error("❌ Error sending notifications:", notifyErr);
+    }
+
+    console.log("🎯 ========== CREATE ORDER FROM INTENT END ==========\n");
+
+    return res.status(201).json({
+      success: true,
+      order: fullOrder,
+      message: "Đặt hàng thành công",
+    });
+  } catch (error) {
+    console.error("❌ Create order from intent error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
     });
   }
 };

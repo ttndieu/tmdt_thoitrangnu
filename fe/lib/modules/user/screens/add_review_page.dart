@@ -4,7 +4,6 @@ import '../constants/app_color.dart';
 import '../constants/app_text_styles.dart';
 import '../models/product_model.dart';
 import '../providers/review_provider.dart';
-import '../widgets/rating_bar_widget.dart';
 
 class AddReviewPage extends StatefulWidget {
   final ProductModel product;

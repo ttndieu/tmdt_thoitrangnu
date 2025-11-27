@@ -56,4 +56,21 @@ class ApiConfig {
       "/api/reviews/can-review/$productId";
   static String updateReview(String reviewId) => "/api/reviews/$reviewId";
   static String deleteReview(String reviewId) => "/api/reviews/$reviewId";
+
+  // PAYMENT ENDPOINTS
+  static const String PAYMENT_VNPAY_CREATE = "/api/payment/vnpay/create";
+  static const String PAYMENT_VNPAY_CALLBACK = "/api/payment/vnpay/callback";
+  static const String PAYMENT_VNPAY_IPN = "/api/payment/vnpay/ipn";
+  
+  static String paymentInfo(String paymentId) => "/api/payment/$paymentId";
+
+  // THÊM MỚI - PAYMENT INTENT
+  static const String PAYMENT_INTENT_CREATE = "/api/payment/intent/create";
+  static String paymentIntent(String id) => "/api/payment/intent/$id";
+  static String cancelPaymentIntent(String id) => "/api/payment/intent/$id/cancel";
+
+  static const String PAYMENT_INTENT_PENDING_PAID = "/api/payment/intent/pending-paid";
+  // THÊM MỚI - ORDER FROM INTENT
+  static const String ORDERS_FROM_INTENT = "/api/orders/create-from-intent";
+
 }

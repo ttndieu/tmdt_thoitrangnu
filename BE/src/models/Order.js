@@ -1,3 +1,5 @@
+// BE/src/models/Order.js
+
 import mongoose from "mongoose";
 
 const orderItemSchema = mongoose.Schema({
@@ -13,6 +15,12 @@ const orderItemSchema = mongoose.Schema({
 
 const orderSchema = mongoose.Schema(
   {
+    // ORDER NUMBER - SHORT FORMAT: #abc123
+    orderNumber: {
+      type: String,
+      unique: true,
+    },
+
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -26,14 +34,20 @@ const orderSchema = mongoose.Schema(
       ref: "Voucher",
       default: null,
     },
-    voucherCode: { type: String, default: null },
-    discount: { type: Number, default: 0 },
-    originalAmount: Number,  // Tổng trước giảm giá
-    totalAmount: Number,     // Tổng sau giảm giá
+    voucherCode: { 
+      type: String, 
+      default: null 
+    },
+    discount: { 
+      type: Number, 
+      default: 0 
+    },
+    originalAmount: Number,
+    totalAmount: Number,
 
     paymentMethod: {
       type: String,
-      enum: ["cod", "momo", "vnpay"],
+      enum: ["cod", "vnpay"],
       default: "cod",
     },
 
@@ -43,9 +57,55 @@ const orderSchema = mongoose.Schema(
       default: "pending",
     },
 
+    paymentStatus: {
+      type: String,
+      enum: ["pending", "paid", "failed", "refunded"],
+      default: "pending",
+    },
+
     shippingAddress: Object,
+
+    trackingNumber: {
+      type: String,
+      default: null,
+    },
+
+    notes: {
+      type: String,
+      default: null,
+    },
   },
-  { timestamps: true }
+  { 
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
+  }
 );
+
+// PRE-SAVE HOOK: GENERATE SHORT ORDER NUMBER
+orderSchema.pre('save', async function(next) {
+  if (this.isNew && !this.orderNumber) {
+    try {
+      // Use last 6 chars of ObjectId + # prefix
+      // Simpler and unique
+      const shortId = this._id.toString().slice(-6).toUpperCase();
+      this.orderNumber = `#${shortId}`;
+      
+      console.log(`✅ Generated short order number: ${this.orderNumber}`);
+
+    } catch (error) {
+      console.error('❌ Error generating order number:', error);
+      // Fallback
+      this.orderNumber = `#${Date.now().toString(36).slice(-6).toUpperCase()}`;
+    }
+  }
+  next();
+});
+
+// INDEXES
+orderSchema.index({ user: 1, createdAt: -1 });
+orderSchema.index({ orderNumber: 1 });
+orderSchema.index({ status: 1 });
+orderSchema.index({ paymentStatus: 1 });
 
 export default mongoose.model("Order", orderSchema);
