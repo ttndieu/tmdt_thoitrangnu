@@ -227,6 +227,7 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
@@ -254,6 +255,7 @@ class _MyAppState extends State<MyApp> {
         navigatorKey: _navigatorKey,
         debugShowCheckedModeBanner: false,
         title: 'Fashion App',
+        
         theme: ThemeData(primarySwatch: Colors.pink),
         initialRoute: AppRoutes.login,
         routes: {
