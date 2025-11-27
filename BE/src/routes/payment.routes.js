@@ -6,17 +6,24 @@ import { verifyToken } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
-// ✅ CREATE VNPAY PAYMENT
+// CREATE VNPAY PAYMENT
 router.post(
   "/vnpay/create",
   verifyToken,
   PaymentController.createVNPayPayment
 );
 
-// ✅ VNPAY CALLBACK
+// VNPAY CALLBACK
 router.get("/vnpay/callback", PaymentController.vnpayCallback);
 
-// ✅ VNPAY IPN
+// VNPAY IPN
 router.get("/vnpay/ipn", PaymentController.vnpayIPN);
+
+// GET PENDING PAID INTENT
+router.get(
+  "/intent/pending-paid",
+  verifyToken,
+  PaymentController.getPendingPaidIntent
+);
 
 export default router;

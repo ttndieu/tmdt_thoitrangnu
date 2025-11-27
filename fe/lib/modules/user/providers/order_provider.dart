@@ -346,6 +346,48 @@ class OrderProvider with ChangeNotifier {
     }
   }
 
+  /// Check pending paid intent (đã thanh toán nhưng chưa có order)
+Future<PaymentIntentModel?> checkPendingPaidIntent() async {
+  try {
+    print('\n🔍 ========== CHECK PENDING PAID INTENT ==========');
+
+    final response = await _apiClient.get(
+      ApiConfig.PAYMENT_INTENT_PENDING_PAID,
+    );
+
+    print('🔍 Response: ${response.statusCode}');
+
+    if (response.statusCode == 200) {
+      final hasPending = response.data['hasPendingIntent'] ?? false;
+      
+      if (hasPending) {
+        final intent = PaymentIntentModel.fromJson(response.data['intent']);
+        _currentIntent = intent;
+        notifyListeners();
+
+        print('⚠️ Found pending paid intent!');
+        print('🎯 Intent ID: ${intent.id}');
+        print('💰 Amount: ${intent.totalAmount}');
+        print('🔍 ========== CHECK PENDING PAID INTENT END ==========\n');
+
+        return intent;
+      } else {
+        print('✅ No pending paid intent');
+        print('🔍 ========== CHECK PENDING PAID INTENT END ==========\n');
+        return null;
+      }
+    }
+  } catch (e) {
+    print('❌ Error checking pending intent: $e');
+    
+    if (e is DioException) {
+      print('❌ Status: ${e.response?.statusCode}');
+      print('❌ Data: ${e.response?.data}');
+    }
+  }
+  return null;
+}
+
   // ================== UTILITIES ==================
 
   /// Clear current intent

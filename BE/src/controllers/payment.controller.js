@@ -360,6 +360,70 @@ class PaymentController {
       });
     }
   }
+
+  /**
+   * GET PENDING PAID INTENT (Chưa có order)
+   * GET /api/payment/intent/pending-paid
+   */
+  async getPendingPaidIntent(req, res) {
+    try {
+      const userId = req.user._id || req.user.id;
+
+      console.log('\n🔍 ========== GET PENDING PAID INTENT ==========');
+      console.log('👤 User:', userId);
+
+      // ✅ TÌM INTENT: paid + chưa có order + chưa expired
+      const intent = await PaymentIntent.findOne({
+        user: userId,
+        paymentStatus: 'paid',
+        order: null,  // Chưa có order
+        expiresAt: { $gt: new Date() },  // Chưa hết hạn
+      })
+      .populate('voucher')
+      .sort({ createdAt: -1 });  // Lấy mới nhất
+
+      if (!intent) {
+        console.log('✅ No pending paid intent found');
+        console.log('🔍 ========== GET PENDING PAID INTENT END ==========\n');
+        
+        return res.json({
+          success: true,
+          hasPendingIntent: false,
+        });
+      }
+
+      console.log('⚠️ Found pending paid intent!');
+      console.log('🎯 Intent ID:', intent._id);
+      console.log('💰 Total amount:', intent.totalAmount);
+      console.log('📊 Payment status:', intent.paymentStatus);
+      console.log('🔍 ========== GET PENDING PAID INTENT END ==========\n');
+
+      return res.json({
+        success: true,
+        hasPendingIntent: true,
+        intent: {
+          _id: intent._id,
+          id: intent._id,
+          totalAmount: intent.totalAmount,
+          originalAmount: intent.originalAmount,
+          discount: intent.discount,
+          shippingFee: intent.shippingFee || 15000,
+          voucherCode: intent.voucherCode,
+          paymentMethod: intent.paymentMethod,
+          paymentStatus: intent.paymentStatus,
+          shippingAddress: intent.shippingAddress,
+          expiresAt: intent.expiresAt,
+          createdAt: intent.createdAt,
+        },
+      });
+    } catch (error) {
+      console.error('❌ Error:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
 }
 
 export default new PaymentController();

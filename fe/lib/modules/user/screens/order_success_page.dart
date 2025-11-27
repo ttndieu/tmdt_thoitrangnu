@@ -258,10 +258,8 @@ class OrderSuccessPage extends StatelessWidget {
     switch (method.toLowerCase()) {
       case 'cod':
         return 'Bạn sẽ thanh toán khi nhận hàng';
-      case 'momo':
-        return 'Vui lòng thanh toán qua ví MoMo';
       case 'vnpay':
-        return 'Vui lòng thanh toán qua VNPAY';
+        return 'Bạn đã thanh toán qua VNPAY';
       default:
         return 'Thanh toán khi nhận hàng';
     }

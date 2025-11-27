@@ -1,5 +1,6 @@
 // lib/modules/user/screens/checkout_page.dart
 
+import 'package:fe/modules/user/models/payment_intent_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../data/models/address_model.dart'; 
@@ -29,7 +30,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
   AddressModel? _selectedAddress;
   VoucherModel? _selectedVoucher;
   double _discount = 0;
-  String? _paidIntentId; // ✅ Intent đã thanh toán
+  String? _paidIntentId;
 
   @override
   void initState() {
@@ -43,25 +44,30 @@ class _CheckoutPageState extends State<CheckoutPage> {
       }
 
       context.read<VoucherProvider>().fetchVouchers();
-
-      // ✅ Check intent đã thanh toán
       _checkPendingIntent();
     });
   }
 
-  // ✅ CHECK INTENT ĐÃ THANH TOÁN
   Future<void> _checkPendingIntent() async {
-    final orderProvider = context.read<OrderProvider>();
-    final intent = orderProvider.currentIntent;
+  final orderProvider = context.read<OrderProvider>();
+  
+  // ƯU TIÊN: Lấy từ provider trước
+  PaymentIntentModel? intent = orderProvider.currentIntent;
 
-    if (intent != null && intent.isPaid && intent.paymentMethod == 'vnpay') {
-      print('✅ Found paid intent: ${intent.id}');
-      setState(() {
-        _paidIntentId = intent.id;
-        _paymentMethod = 'vnpay';
-      });
-    }
+  // NẾU KHÔNG CÓ: Gọi API check từ server
+  if (intent == null) {
+    print('🔍 No intent in provider, checking from server...');
+    intent = await orderProvider.checkPendingPaidIntent();
   }
+
+  if (intent != null && intent.isPaid && intent.paymentMethod == 'vnpay') {
+    print('✅ Found paid intent: ${intent.id}');
+    setState(() {
+      _paidIntentId = intent!.id;
+      _paymentMethod = 'vnpay';
+    });
+  }
+}
 
   double _calculateTotal(CartProvider cartProvider) {
     return cartProvider.selectedItems.fold(0.0, (sum, item) => sum + item.subtotal);
@@ -105,7 +111,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
           return Column(
             children: [
-              // ✅ BANNER ĐÃ THANH TOÁN
               if (_paidIntentId != null) _buildPaidBanner(),
 
               Expanded(
@@ -132,7 +137,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
-  // ✅ BANNER ĐÃ THANH TOÁN
   Widget _buildPaidBanner() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -572,13 +576,66 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
+  // ✅ ORDER SUMMARY - HIỂN THỊ CHI TIẾT TỪ INTENT KHI ĐÃ THANH TOÁN
   Widget _buildOrderSummary(CartProvider cartProvider) {
+    // ✅ NẾU ĐÃ THANH TOÁN - HIỂN THỊ CHI TIẾT TỪ INTENT
+    if (_paidIntentId != null) {
+      final intent = context.read<OrderProvider>().currentIntent;
+      
+      if (intent != null) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            children: [
+              _buildSummaryRow('Tạm tính', intent.originalAmount),
+              const SizedBox(height: 8),
+              _buildSummaryRow('Phí vận chuyển', intent.shippingFee),
+              if (intent.discount > 0) ...[
+                const SizedBox(height: 8),
+                _buildSummaryRow('Giảm giá', -intent.discount, isDiscount: true),
+              ],
+              const Divider(height: 20),
+              _buildSummaryRow('Tổng cộng', intent.totalAmount, isTotal: true),
+              const SizedBox(height: 12),
+              // ✅ BOX THÔNG BÁO ĐÃ THANH TOÁN
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green, width: 1.5),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Đã thanh toán ${intent.totalAmount.toStringAsFixed(0)}đ qua VNPay',
+                        style: const TextStyle(
+                          color: Colors.green,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+    }
+
+    // ✅ CHƯA THANH TOÁN - HIỂN THỊ BÌNH THƯỜNG
     const shippingFee = 15000.0;
     final subtotal = _calculateTotal(cartProvider);
-    
-    final total = _paidIntentId != null
-        ? 0.0
-        : (subtotal + shippingFee - _discount);
+    final total = subtotal + shippingFee - _discount;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -590,7 +647,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
         children: [
           _buildSummaryRow('Tạm tính', subtotal),
           const SizedBox(height: 8),
-          if (_paidIntentId == null) _buildSummaryRow('Phí vận chuyển', shippingFee),
+          _buildSummaryRow('Phí vận chuyển', shippingFee),
           if (_discount > 0) ...[
             const SizedBox(height: 8),
             _buildSummaryRow('Giảm giá', -_discount, isDiscount: true),
@@ -636,12 +693,24 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
+  // ✅ BOTTOM BAR - HIỂN THỊ 0đ KHI ĐÃ THANH TOÁN
   Widget _buildBottomBar(CartProvider cartProvider) {
-    const shippingFee = 15000.0;
-    final subtotal = _calculateTotal(cartProvider);
-    final total = _paidIntentId != null
-        ? 0.0
-        : (subtotal + shippingFee - _discount);
+    // ✅ TÍNH TOTAL
+    double displayTotal;
+    double? paidAmount;
+    
+    if (_paidIntentId != null) {
+      // ✅ ĐÃ THANH TOÁN - HIỂN THỊ 0đ
+      final intent = context.read<OrderProvider>().currentIntent;
+      displayTotal = 0.0;  // ✅ HIỂN THỊ 0đ
+      paidAmount = intent?.totalAmount;  // LƯU SỐ TIỀN ĐÃ THANH TOÁN
+    } else {
+      // ✅ CHƯA THANH TOÁN - TÍNH BÌNH THƯỜNG
+      const shippingFee = 15000.0;
+      final subtotal = _calculateTotal(cartProvider);
+      displayTotal = subtotal + shippingFee - _discount;
+      paidAmount = null;
+    }
 
     String buttonLabel;
     VoidCallback? buttonAction;
@@ -681,13 +750,27 @@ class _CheckoutPageState extends State<CheckoutPage> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Tổng thanh toán',
-                      style: AppTextStyles.bodySmall),
                   Text(
-                    '${total.toStringAsFixed(0)}đ',
-                    style: AppTextStyles.h2.copyWith(color: AppColors.primary),
+                    _paidIntentId != null ? 'Đã thanh toán' : 'Tổng thanh toán',
+                    style: AppTextStyles.bodySmall,
                   ),
-                  if (_discount > 0)
+                  Text(
+                    '${displayTotal.toStringAsFixed(0)}đ',  // ✅ 0đ KHI ĐÃ THANH TOÁN
+                    style: AppTextStyles.h2.copyWith(
+                      color: _paidIntentId != null ? Colors.green : AppColors.primary,
+                    ),
+                  ),
+                  // ✅ HIỂN THỊ SỐ TIỀN ĐÃ THANH TOÁN
+                  if (paidAmount != null)
+                    Text(
+                      'Đã thanh toán ${paidAmount.toStringAsFixed(0)}đ qua VNPay',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: Colors.green,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    )
+                  else if (_discount > 0)
                     Text(
                       'Tiết kiệm ${_discount.toStringAsFixed(0)}đ',
                       style: AppTextStyles.bodySmall.copyWith(

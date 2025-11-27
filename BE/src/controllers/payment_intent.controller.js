@@ -101,6 +101,7 @@ class PaymentIntentController {
 
       console.log(`💰 Original amount: ${originalAmount}đ`);
 
+      // APPLY VOUCHER
       let discount = 0;
       let voucher = null;
       let voucherCode = null;
@@ -156,23 +157,36 @@ class PaymentIntentController {
         console.log(`🎫 Applied: ${voucherCode} → Discount: ${discount}đ`);
       }
 
-      const totalAmount = originalAmount - discount;
-      console.log(`💵 Total amount: ${totalAmount}đ`);
+      // CRITICAL FIX: ADD SHIPPING FEE
+      const shippingFee = 15000; // VND
+      console.log(`🚚 Shipping fee: ${shippingFee}đ`);
 
+      // CALCULATE TOTAL WITH SHIPPING FEE
+      const totalAmount = originalAmount - discount + shippingFee;
+      
+      console.log('   Calculation:');
+      console.log(`   Original: ${originalAmount}đ`);
+      console.log(`   Discount: -${discount}đ`);
+      console.log(`   Shipping: +${shippingFee}đ`);
+      console.log(`   Total: ${totalAmount}đ`);
+
+      // CREATE INTENT WITH SHIPPING FEE
       const intent = await PaymentIntent.create({
         user: userId,
         items: intentItems,
         voucher: voucherId || null,
         voucherCode: voucherCode || null,
         discount: discount,
+        shippingFee: shippingFee, 
         originalAmount: originalAmount,
-        totalAmount: totalAmount,
+        totalAmount: totalAmount, 
         paymentMethod,
         shippingAddress,
         paymentStatus: "pending",
       });
 
       console.log("✅ Intent created:", intent._id);
+      console.log("💰 Total amount (with shipping):", intent.totalAmount);
       console.log("⏰ Expires at:", intent.expiresAt);
       console.log("💫 ========== CREATE PAYMENT INTENT END ==========\n");
 
@@ -183,6 +197,7 @@ class PaymentIntentController {
           totalAmount: intent.totalAmount,
           originalAmount: intent.originalAmount,
           discount: intent.discount,
+          shippingFee: intent.shippingFee, 
           voucherCode: intent.voucherCode,
           paymentMethod: intent.paymentMethod,
           paymentStatus: intent.paymentStatus,

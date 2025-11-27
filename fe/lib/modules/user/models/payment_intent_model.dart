@@ -6,6 +6,7 @@ class PaymentIntentModel {
   final double totalAmount;
   final double originalAmount;
   final double discount;
+  final double shippingFee;
   final String? voucherCode;
   final String paymentMethod;
   final String paymentStatus;
@@ -19,6 +20,7 @@ class PaymentIntentModel {
     required this.totalAmount,
     required this.originalAmount,
     required this.discount,
+    required this.shippingFee,
     this.voucherCode,
     required this.paymentMethod,
     required this.paymentStatus,
@@ -34,6 +36,7 @@ class PaymentIntentModel {
       totalAmount: (json['totalAmount'] ?? 0).toDouble(),
       originalAmount: (json['originalAmount'] ?? 0).toDouble(),
       discount: (json['discount'] ?? 0).toDouble(),
+      shippingFee: (json['shippingFee'] ?? 0).toDouble(),
       voucherCode: json['voucherCode'],
       paymentMethod: json['paymentMethod'] ?? 'cod',
       paymentStatus: json['paymentStatus'] ?? 'pending',

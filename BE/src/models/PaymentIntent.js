@@ -33,6 +33,12 @@ const paymentIntentSchema = mongoose.Schema(
     voucherCode: { type: String, default: null },
     discount: { type: Number, default: 0 },
     
+    // Shipping fee
+    shippingFee: { 
+      type: Number, 
+      default: 15000  // VND
+    },
+    
     // Amounts
     originalAmount: { type: Number, required: true },
     totalAmount: { type: Number, required: true },

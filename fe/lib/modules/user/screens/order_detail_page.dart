@@ -39,41 +39,23 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     _loadOrderDetail();
   }
 
-Future<void> _loadOrderDetail() async {
-  final provider = context.read<OrderProvider>();
-  final order = provider.orders.firstWhere(
-    (o) => o.id == widget.orderId,
-    orElse: () => provider.orders.first,
-  );
+  Future<void> _loadOrderDetail() async {
+    final provider = context.read<OrderProvider>();
+    final order = provider.orders.firstWhere(
+      (o) => o.id == widget.orderId,
+      orElse: () => provider.orders.first,
+    );
 
-  // ✅ THÊM DEBUG LOG
-  print('📦 ========== ORDER DETAIL DEBUG ==========');
-  print('📦 Order ID: ${order.id}');
-  print('📦 Total items: ${order.items.length}');
-  
-  for (var i = 0; i < order.items.length; i++) {
-    final item = order.items[i];
-    print('');
-    print('📦 Item [$i]:');
-    print('   - productId: ${item.productId}');
-    print('   - productName: "${item.productName}"'); // ← KIỂM TRA GIÁ TRỊ NÀY
-    print('   - imageUrl: ${item.imageUrl}');
-    print('   - size: ${item.size}');
-    print('   - color: ${item.color}');
-    print('   - quantity: ${item.quantity}');
-    print('   - price: ${item.price}');
+    setState(() {
+      _order = order;
+      _isLoading = false;
+    });
+
+    // ✅ Load review status for all products
+    if (_order != null && _order!.status == 'completed') {
+      await _loadReviewStatus();
+    }
   }
-  print('📦 ==========================================');
-
-  setState(() {
-    _order = order;
-    _isLoading = false;
-  });
-
-  if (_order != null && _order!.status == 'completed') {
-    await _loadReviewStatus();
-  }
-}
 
   // ✅ LOAD REVIEW STATUS CHO TẤT CẢ PRODUCTS
   Future<void> _loadReviewStatus() async {
@@ -583,7 +565,7 @@ Widget _buildOrderItems() {
     final originalAmount = _order!.originalAmount ?? _order!.totalAmount;
     final discount = _order!.discount ?? 0.0;
     const shippingFee = 15000.0;
-    final finalTotal = _order!.totalAmount + shippingFee;
+    final finalTotal = _order!.totalAmount;
 
     return Container(
       padding: const EdgeInsets.all(16),

@@ -19,6 +19,45 @@ class AuthProvider with ChangeNotifier {
   String? message;
   UserModel? user;
 
+  // ✅ THÊM GETTERS
+  bool get isAuthenticated => 
+      status == AuthStatus.authenticated && user != null;
+  
+  bool get isAdmin => user?.role == 'admin';
+  bool get isUser => user?.role == 'user';
+
+  // ✅ CHECK AUTH STATUS FROM STORAGE
+  Future<void> checkAuthStatus() async {
+    try {
+      print('\n🔐 ========== CHECK AUTH STATUS ==========');
+      
+      final token = await _storage.getToken();
+      final userJson = await _storage.getUser();
+
+      if (token != null && userJson != null) {
+        userJson['token'] = token;
+        user = UserModel.fromJson(userJson);
+        status = AuthStatus.authenticated;
+        
+        print('✅ User authenticated from storage');
+        print('👤 User: ${user?.name}');
+        print('📧 Email: ${user?.email}');
+        print('🔐 ========== CHECK AUTH STATUS END ==========\n');
+      } else {
+        status = AuthStatus.unauthenticated;
+        print('⚠️ No user in storage');
+        print('🔐 ========== CHECK AUTH STATUS END ==========\n');
+      }
+      
+      notifyListeners();
+    } catch (e) {
+      print('❌ Check auth status error: $e');
+      print('🔐 ========== CHECK AUTH STATUS END ==========\n');
+      status = AuthStatus.unauthenticated;
+      notifyListeners();
+    }
+  }
+
   // ========== LOGIN ==========
   Future<bool> login(String email, String password) async {
     try {

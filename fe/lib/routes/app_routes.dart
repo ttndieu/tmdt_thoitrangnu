@@ -9,6 +9,5 @@ class AppRoutes {
   // Admin
   static const String adminDashboard = '/admin/dashboard';
 
-
-
+  static const String checkout = '/checkout';
 }

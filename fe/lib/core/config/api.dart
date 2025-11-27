@@ -69,6 +69,7 @@ class ApiConfig {
   static String paymentIntent(String id) => "/api/payment/intent/$id";
   static String cancelPaymentIntent(String id) => "/api/payment/intent/$id/cancel";
 
+  static const String PAYMENT_INTENT_PENDING_PAID = "/api/payment/intent/pending-paid";
   // THÊM MỚI - ORDER FROM INTENT
   static const String ORDERS_FROM_INTENT = "/api/orders/create-from-intent";
 
