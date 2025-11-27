@@ -1,6 +1,9 @@
 // lib/modules/admin/admin_provider.dart
 
 import 'package:flutter/material.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:pdf/pdf.dart';
+import 'package:printing/printing.dart';
 import '../../core/network/api_client.dart';
 import '../../modules/auth/providers/auth_provider.dart';
 import 'admin_routes.dart';
@@ -97,6 +100,175 @@ class AdminProvider with ChangeNotifier {
     notifyListeners();
   }
 
+// =========================
+// XUẤT HOÁ ĐƠN
+// =========================
+void exportInvoice(Map<String, dynamic> order) async {
+  final pdf = pw.Document();
+
+  final items = order["items"] as List<dynamic>;
+  final shipping = order["shippingAddress"];
+
+  pdf.addPage(
+    pw.MultiPage(
+      pageTheme: pw.PageTheme(
+        margin: const pw.EdgeInsets.all(28),
+        theme: pw.ThemeData.withFont(
+          base: await PdfGoogleFonts.robotoRegular(),
+          bold: await PdfGoogleFonts.robotoBold(),
+        ),
+      ),
+      build: (context) => [
+        // ---------------- HEADER ----------------
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text("HÓA ĐƠN BÁN HÀNG",
+                    style: pw.TextStyle(
+                        fontSize: 20, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 4),
+                pw.Text("Mã đơn: ${order["_id"]}"),
+                pw.Text("Ngày: ${order["createdAt"].toString().substring(0, 10)}"),
+              ],
+            ),
+            pw.BarcodeWidget(
+              barcode: pw.Barcode.qrCode(),
+              data: order["_id"],
+              width: 80,
+              height: 80,
+            ),
+          ],
+        ),
+
+        pw.SizedBox(height: 20),
+
+        // ---------------- CUSTOMER INFO ----------------
+        pw.Container(
+          padding: const pw.EdgeInsets.all(10),
+          decoration: pw.BoxDecoration(
+              borderRadius: pw.BorderRadius.circular(6),
+              color: PdfColors.grey100),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text("Thông tin khách hàng",
+                  style: pw.TextStyle(
+                      fontSize: 14, fontWeight: pw.FontWeight.bold)),
+              pw.SizedBox(height: 6),
+              pw.Text("Tên: ${shipping["fullName"]}"),
+              pw.Text("SĐT: ${shipping["phone"]}"),
+              pw.Text(
+                "Địa chỉ: ${shipping["addressLine"]}, ${shipping["ward"]}, "
+                "${shipping["district"]}, ${shipping["city"]}",
+              ),
+            ],
+          ),
+        ),
+
+        pw.SizedBox(height: 20),
+
+        // ---------------- PRODUCT TABLE ----------------
+        pw.Table.fromTextArray(
+          headers: ["Sản phẩm", "SL", "Size/Màu", "Giá", "Tổng"],
+          headerStyle: pw.TextStyle(
+            fontWeight: pw.FontWeight.bold,
+            color: PdfColors.white,
+          ),
+          headerDecoration:
+              const pw.BoxDecoration(color: PdfColors.blueGrey900),
+          cellAlignment: pw.Alignment.centerLeft,
+          data: items.map((e) {
+            final total = e["price"] * e["quantity"];
+            return [
+              e["product"]["name"],
+              e["quantity"].toString(),
+              "${e["size"]}/${e["color"]}",
+              "${e["price"]}đ",
+              "$total đ",
+            ];
+          }).toList(),
+        ),
+
+        pw.SizedBox(height: 20),
+
+        // ---------------- TOTAL ----------------
+        pw.Align(
+          alignment: pw.Alignment.centerRight,
+          child: pw.Container(
+            padding: const pw.EdgeInsets.all(14),
+            width: 280,
+            decoration: pw.BoxDecoration(
+              color: PdfColors.grey100,
+              borderRadius: pw.BorderRadius.circular(6),
+            ),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                _totalRow("Tổng tiền hàng:",
+                    "${order["originalAmount"] ?? order["totalAmount"]} đ"),
+                _totalRow("Giảm giá:", "${order["discount"] ?? 0} đ"),
+                pw.Divider(),
+                _totalRow(
+                  "Thành tiền:",
+                  "${order["totalAmount"]} đ",
+                  bold: true,
+                  font: 16,
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        pw.SizedBox(height: 40),
+
+        // ---------------- FOOTER ----------------
+        pw.Center(
+          child: pw.Column(
+            children: [
+              pw.Text("Cảm ơn bạn đã mua hàng!",
+                  style: pw.TextStyle(
+                      fontSize: 14, fontWeight: pw.FontWeight.bold)),
+              pw.SizedBox(height: 10),
+              pw.Text("Nếu cần hỗ trợ, vui lòng liên hệ shop."),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+
+  // Xuất PDF
+  await Printing.layoutPdf(
+    onLayout: (format) async => pdf.save(),
+  );
+}
+
+pw.Widget _totalRow(String label, String value,
+    {bool bold = false, double font = 14}) {
+  return pw.Padding(
+    padding: const pw.EdgeInsets.symmetric(vertical: 2),
+    child: pw.Row(
+      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+      children: [
+        pw.Text(label,
+            style: pw.TextStyle(
+              fontSize: font,
+              fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal,
+            )),
+        pw.Text(value,
+            style: pw.TextStyle(
+              fontSize: font,
+              fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal,
+            )),
+      ],
+    ),
+  );
+}
+
+
   // ========================= ROUTE HANDLING =========================
   void changeRoute(String route) {
     _currentRoute = route;
@@ -114,6 +286,7 @@ class AdminProvider with ChangeNotifier {
 
     notifyListeners();
   }
+
 
   // ========================= LOGOUT =========================
   Future<void> logout(BuildContext context) async {

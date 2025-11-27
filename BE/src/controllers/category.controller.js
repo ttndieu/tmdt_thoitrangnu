@@ -1,11 +1,25 @@
 import Category from "../models/Category.js";
+import Product from "../models/Product.js"; 
 import slugify from "slugify";
 
 // GET /api/category
 export const getAllCategories = async (req, res) => {
   try {
+    // Lấy danh sách category
     const categories = await Category.find().sort({ createdAt: -1 });
-    return res.json({ success: true, data: categories });
+
+    // Thêm số lượng sản phẩm trong mỗi danh mục
+    const data = await Promise.all(
+      categories.map(async (c) => {
+        const count = await Product.countDocuments({ category: c._id  });
+        return {
+          ...c.toObject(),
+          count,
+        };
+      })
+    );
+
+    return res.json({ success: true, data });
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }

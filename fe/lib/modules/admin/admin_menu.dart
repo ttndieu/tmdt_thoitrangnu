@@ -5,11 +5,6 @@ import 'orders/orders_page.dart';
 import 'categories/categories_page.dart';
 import 'vouchers/vouchers_page.dart';
 import 'users/users_page.dart';
-import 'products/product_detail_admin.dart';
-import 'products/product_form_page.dart';
-import 'orders/order_detail_admin.dart';
-import 'users/user_detail_admin.dart';
-import 'users/user_form_page.dart';
 
 import 'admin_routes.dart';
 

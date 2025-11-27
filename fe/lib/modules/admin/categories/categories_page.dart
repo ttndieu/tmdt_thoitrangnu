@@ -78,8 +78,14 @@ class CategoriesPageState extends State<CategoriesPage> {
           decoration: const InputDecoration(labelText: "Tên danh mục"),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Hủy")),
-          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text("Lưu")),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Hủy"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Lưu"),
+          ),
         ],
       ),
     );
@@ -120,8 +126,10 @@ class CategoriesPageState extends State<CategoriesPage> {
     final width = MediaQuery.of(context).size.width;
 
     int cross = 1;
-    if (width >= 900) cross = 3;
-    else if (width >= 600) cross = 2;
+    if (width >= 900)
+      cross = 3;
+    else if (width >= 600)
+      cross = 2;
 
     return GridView.builder(
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -148,12 +156,34 @@ class CategoriesPageState extends State<CategoriesPage> {
             color: const Color(0xFFE6E8FF),
             child: Row(
               children: [
-                const Icon(Icons.folder, size: 30, color: Color.fromARGB(255, 120, 156, 222)),
+                const Icon(
+                  Icons.folder,
+                  size: 30,
+                  color: Color.fromARGB(255, 120, 156, 222),
+                ),
                 G.w12,
                 Expanded(
-                  child: Text(
-                    c["name"],
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        c["name"],
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+
+                      // ⭐ THÊM DÒNG NÀY ⭐
+                      Text(
+                        "${c["count"] ?? 0} sản phẩm",
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.black54,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 IconButton(
@@ -174,7 +204,10 @@ class CategoriesPageState extends State<CategoriesPage> {
                     if (!ok) return;
 
                     try {
-                      final admin = Provider.of<AdminProvider>(context, listen: false);
+                      final admin = Provider.of<AdminProvider>(
+                        context,
+                        listen: false,
+                      );
                       await admin.api.delete("/api/category/${c["_id"]}");
                       showSuccess(context, "Đã xóa danh mục");
                       reload();

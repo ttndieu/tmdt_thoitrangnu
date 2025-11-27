@@ -1,5 +1,8 @@
 // lib/modules/admin/products/components/variant_table.dart
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+
+final moneyFmt = NumberFormat("#,###", "vi_VN");
 
 class VariantTable extends StatelessWidget {
   final List<Map<String, dynamic>> variants;
@@ -58,7 +61,13 @@ class VariantTable extends StatelessWidget {
                   DataCell(Text(v['size']?.toString() ?? '')),
                   DataCell(Text(v['color']?.toString() ?? '')),
                   DataCell(Text(v['stock']?.toString() ?? '0')),
-                  DataCell(Text(v['price']?.toString() ?? '0')),
+                  DataCell(
+                    Text(
+                      moneyFmt.format(
+                        int.tryParse(v['price']?.toString() ?? '0') ?? 0,
+                      ),
+                    ),
+                  ),
                   DataCell(
                     Row(
                       children: [
