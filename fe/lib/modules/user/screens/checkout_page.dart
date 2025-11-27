@@ -16,6 +16,7 @@ import '../widgets/voucher_select_sheet.dart';
 import '../screens/add_address_page.dart'; 
 import 'order_success_page.dart';
 import 'vnpay_webview_page.dart';
+import 'package:fe/core/utils/currency_formatter.dart';
 
 class CheckoutPage extends StatefulWidget {
   const CheckoutPage({Key? key}) : super(key: key);
@@ -428,8 +429,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       ],
                     ),
                   ),
-                  Text(
-                    '${item.subtotal.toStringAsFixed(0)}đ',
+                  Text(item.subtotal.toCurrency(),
                     style: AppTextStyles.bodyMedium.copyWith(
                       fontWeight: FontWeight.bold,
                       color: AppColors.primary,
@@ -494,8 +494,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                           ),
                         ),
                         const SizedBox(height: 2),
-                        Text(
-                          'Giảm ${_discount.toStringAsFixed(0)}đ',
+                        Text('Giảm ${_discount.toCurrency()}',
                           style: AppTextStyles.bodySmall.copyWith(
                             color: AppColors.primary,
                           ),
@@ -677,8 +676,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       isDiscount ? AppColors.error : AppColors.textSecondary,
                 ),
         ),
-        Text(
-          '${amount.abs().toStringAsFixed(0)}đ',
+        Text(amount.abs().toCurrency(),
           style: isTotal
               ? AppTextStyles.h2.copyWith(color: AppColors.primary)
               : isDiscount
@@ -754,8 +752,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     _paidIntentId != null ? 'Đã thanh toán' : 'Tổng thanh toán',
                     style: AppTextStyles.bodySmall,
                   ),
-                  Text(
-                    '${displayTotal.toStringAsFixed(0)}đ',  // ✅ 0đ KHI ĐÃ THANH TOÁN
+                  Text(displayTotal.toCurrency(),  
                     style: AppTextStyles.h2.copyWith(
                       color: _paidIntentId != null ? Colors.green : AppColors.primary,
                     ),
@@ -763,7 +760,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   // ✅ HIỂN THỊ SỐ TIỀN ĐÃ THANH TOÁN
                   if (paidAmount != null)
                     Text(
-                      'Đã thanh toán ${paidAmount.toStringAsFixed(0)}đ qua VNPay',
+                      'Đã thanh toán ${paidAmount.toCurrency()} qua VNPay',
                       style: AppTextStyles.bodySmall.copyWith(
                         color: Colors.green,
                         fontSize: 11,
@@ -772,7 +769,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     )
                   else if (_discount > 0)
                     Text(
-                      'Tiết kiệm ${_discount.toStringAsFixed(0)}đ',
+                      'Tiết kiệm ${_discount.toCurrency()}',
                       style: AppTextStyles.bodySmall.copyWith(
                         color: AppColors.error,
                         fontSize: 11,

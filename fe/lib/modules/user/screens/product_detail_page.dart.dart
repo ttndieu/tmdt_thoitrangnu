@@ -3,7 +3,6 @@
 import 'package:fe/modules/user/providers/cart_provider.dart';
 import 'package:fe/modules/user/providers/review_provider.dart';
 import 'package:fe/modules/user/screens/cart_page.dart';
-import 'package:fe/modules/user/screens/add_review_page.dart';
 import 'package:fe/modules/user/screens/reviews_page.dart';
 import 'package:fe/modules/user/widgets/review_item_widget.dart';
 import 'package:fe/modules/user/widgets/rating_bar_widget.dart';
@@ -13,6 +12,7 @@ import '../constants/app_color.dart';
 import '../constants/app_text_styles.dart';
 import '../models/product_model.dart';
 import '../providers/wishlist_provider.dart';
+import 'package:fe/core/utils/currency_formatter.dart';
 
 class ProductDetailPage extends StatefulWidget {
   final ProductModel product;
@@ -258,7 +258,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${_selectedVariant!.price.toStringAsFixed(0)}đ',
+                      _selectedVariant!.price.toCurrency(),
                       style: AppTextStyles.h1.copyWith(
                         color: AppColors.primary,
                         fontSize: 28,
@@ -266,7 +266,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     ),
                     if (_quantity > 1)
                       Text(
-                        'Tổng: ${(_selectedVariant!.price * _quantity).toStringAsFixed(0)}đ',
+                        'Tổng: ${(_selectedVariant!.price * _quantity).toCurrency()}',
                         style: AppTextStyles.bodySmall,
                       ),
                   ],
@@ -634,7 +634,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   children: [
                     const Text('Tổng tiền', style: AppTextStyles.bodySmall),
                     Text(
-                      '${(_selectedVariant!.price * _quantity).toStringAsFixed(0)}đ',
+                      (_selectedVariant!.price * _quantity).toCurrency(),
                       style: AppTextStyles.h2.copyWith(color: AppColors.primary),
                     ),
                   ],
