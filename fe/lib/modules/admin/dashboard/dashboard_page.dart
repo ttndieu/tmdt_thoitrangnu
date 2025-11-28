@@ -101,7 +101,6 @@ class _DashboardPageState extends State<DashboardPage> {
       (o["cancelled"] ?? 0).toDouble(),
     ];
     final colors = [Colors.orange.shade300, Colors.blue.shade300, Colors.purple.shade300, Colors.green.shade400, Colors.red.shade300];
-    final labels = ["Chờ xác nhận", "Đã xác nhận", "Đang giao", "Hoàn thành", "Đã hủy"];
 
     if (vals.every((e) => e == 0)) {
       return PieChartData(sections: [PieChartSectionData(value: 1, color: Colors.grey.shade300, title: "0", radius: 60)]);

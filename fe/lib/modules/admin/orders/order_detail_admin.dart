@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 
 import '../admin_provider.dart';
 import '../common/common_gap.dart';
 import '../common/common_notify.dart';
 import '../common/common_confirm.dart';
 import 'orders_page.dart';
-
+final moneyFmt = NumberFormat("#,###", "vi_VN");
 class OrderDetailAdmin extends StatefulWidget {
   final Map<String, dynamic> order;
   const OrderDetailAdmin({super.key, required this.order});
@@ -117,7 +118,7 @@ class _OrderDetailAdminState extends State<OrderDetailAdmin> {
                             ],
                           ),
                         ),
-                        Text("${item["price"]}đ"),
+                        Text("${moneyFmt.format(item["price"] ?? 0)}đ"),
                       ],
                     ),
                   ),
@@ -130,7 +131,8 @@ class _OrderDetailAdminState extends State<OrderDetailAdmin> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("Tổng tiền: ${order["totalAmount"]}đ"),
+                
+                Text("Tổng tiền: ${moneyFmt.format(order["totalAmount"] ?? 0)}đ"),
                 Text("Phương thức: ${order["paymentMethod"]}"),
                 Text("Trạng thái: ${order["status"]}"),
               ],

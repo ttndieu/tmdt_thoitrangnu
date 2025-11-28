@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../admin_provider.dart';
 
 class AdminHeader extends StatelessWidget {
   final TextEditingController controller;

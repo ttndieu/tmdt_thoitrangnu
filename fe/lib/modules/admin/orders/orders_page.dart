@@ -1,10 +1,11 @@
 // lib/modules/admin/orders/orders_page.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../admin_provider.dart';
 import '../common/common_table.dart';
-import '../common/common_notify.dart';
 
+final moneyFmt = NumberFormat("#,###", "vi_VN");
 class OrdersPage extends StatefulWidget {
   const OrdersPage({super.key});
 
@@ -194,7 +195,7 @@ class OrdersPageState extends State<OrdersPage> {
                           final short = _shortId(id);
                           final userName = o["user"]?["name"] ?? "—";
                           final status = o["status"]?.toString() ?? "";
-                          final total = o["totalAmount"]?.toString() ?? "0";
+                          final total = o["totalAmount"]?? "0";
                           final date = (o["createdAt"]?.toString() ?? "").substring(0, 10);
 
                           final actions = Row(
@@ -211,14 +212,14 @@ class OrdersPageState extends State<OrdersPage> {
                           );
 
                           if (isNarrow) {
-                            return [short, userName, "${total}đ", actions];
+                            return [short, userName, "${moneyFmt.format(total)}đ", actions];
                           }
 
                           return [
                             short,
                             userName,
                             _statusChip(status),
-                            "${total}đ",
+                            "${moneyFmt.format(total)}đ",
                             date,
                             actions,
                           ];
