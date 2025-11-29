@@ -48,26 +48,63 @@ export const createOrder = async (req, res) => {
       console.log(`⚠️ No selectedItemIds provided, using all cart items`);
     }
 
+    // ✅ CHECK TỒN KHO & TÍNH TỔNG
     let originalAmount = 0;
 
-    // Check tồn kho & tính tổng
+    console.log(`\n🔍 ========== VALIDATE STOCK ==========`);
     for (let item of itemsToOrder) {
       const product = item.product;
-
+      
+      console.log(`\n📦 Product: ${product.name || product._id}`);
+      console.log(`   Size: ${item.size}`);
+      console.log(`   Color: ${item.color}`);
+      console.log(`   Quantity: ${item.quantity}`);
+      
+      // ✅ CHECK: Product có variants không?
+      if (!product.variants || !Array.isArray(product.variants)) {
+        console.log(`❌ Product ${product._id} has no variants array!`);
+        return res.status(400).json({
+          message: `Sản phẩm ${product.name} không có thông tin variants`
+        });
+      }
+      
+      console.log(`   Available variants count: ${product.variants.length}`);
+      
+      // ✅ TÌM VARIANT
       const variant = product.variants.find(
         (v) => v.size === item.size && v.color === item.color
       );
 
-      if (!variant || variant.stock < item.quantity) {
+      if (!variant) {
+        console.log(`❌ Variant NOT FOUND!`);
+        console.log(`   Available variants:`, product.variants.map(v => ({
+          size: v.size,
+          color: v.color,
+          stock: v.stock
+        })));
+        
         return res.status(400).json({
-          message: `Not enough stock for ${product.name}`
+          message: `Không tìm thấy size ${item.size} màu ${item.color} cho ${product.name}`
+        });
+      }
+      
+      console.log(`   ✅ Variant found:`);
+      console.log(`      Current stock: ${variant.stock}`);
+      console.log(`      Price: ${variant.price}`);
+      
+      if (variant.stock < item.quantity) {
+        console.log(`❌ Not enough stock! (Need ${item.quantity}, Have ${variant.stock})`);
+        return res.status(400).json({
+          message: `Không đủ hàng cho ${product.name} (Còn ${variant.stock})`
         });
       }
 
       originalAmount += variant.price * item.quantity;
+      console.log(`   Subtotal: ${variant.price * item.quantity}`);
     }
 
-    console.log(`💰 Original amount: ${originalAmount}`);
+    console.log(`\n💰 Original amount: ${originalAmount}`);
+    console.log(`🔍 ========== VALIDATE STOCK END ==========\n`);
 
     // ✅ APPLY VOUCHER
     let discount = 0;
@@ -117,36 +154,93 @@ export const createOrder = async (req, res) => {
     const totalAmount = originalAmount - discount;
     console.log(`💵 Total amount: ${totalAmount}`);
 
-    // ✅ QUAN TRỌNG: CHỈ TRỪ STOCK NẾU LÀ COD
-    // VNPay sẽ trừ stock khi callback thành công
+    // ✅ TRỪ STOCK (CHỈ COD, VNPAY SẼ TRỪ SAU)
     if (paymentMethod === 'cod') {
-      console.log('💵 COD payment - Deducting stock now');
+      console.log('\n📦 ========== DEDUCT STOCK (COD) ==========');
+      console.log(`Processing ${itemsToOrder.length} items...`);
       
-      // Trừ tồn kho VÀ tăng sold
-      for (let item of itemsToOrder) {
-        // Trừ stock của variant
-        await Product.updateOne(
-          {
-            _id: item.product._id,
-            "variants.size": item.size,
-            "variants.color": item.color
-          },
-          { $inc: { "variants.$.stock": -item.quantity } }
-        );
+      for (let i = 0; i < itemsToOrder.length; i++) {
+        const item = itemsToOrder[i];
+        const product = item.product;
         
-        // Tăng sold count của product
-        await Product.findByIdAndUpdate(
-          item.product._id,
-          { $inc: { sold: item.quantity } }
-        );
+        console.log(`\n[${i+1}/${itemsToOrder.length}] Processing: ${product.name}`);
+        console.log(`   Product ID: ${product._id}`);
+        console.log(`   Size: ${item.size}`);
+        console.log(`   Color: ${item.color}`);
+        console.log(`   Quantity: ${item.quantity}`);
         
-        console.log(`✅ Product ${item.product._id}: -${item.quantity} stock, +${item.quantity} sold`);
+        try {
+          // ✅ TRỪ STOCK - DÙNG arrayFilters
+          const stockUpdateResult = await Product.updateOne(
+            {
+              _id: product._id
+            },
+            { 
+              $inc: { "variants.$[elem].stock": -item.quantity } 
+            },
+            {
+              arrayFilters: [
+                { 
+                  "elem.size": item.size,
+                  "elem.color": item.color
+                }
+              ]
+            }
+          );
+          
+          console.log(`   Stock update result:`, {
+            matched: stockUpdateResult.matchedCount,
+            modified: stockUpdateResult.modifiedCount,
+            acknowledged: stockUpdateResult.acknowledged
+          });
+          
+          if (stockUpdateResult.modifiedCount === 0) {
+            console.log(`   ⚠️ WARNING: Stock NOT modified!`);
+            console.log(`   ⚠️ This variant may not exist or arrayFilters didn't match`);
+          } else {
+            console.log(`   ✅ Stock deducted: -${item.quantity}`);
+          }
+          
+          // ✅ TĂNG SOLD
+          const soldUpdateResult = await Product.findByIdAndUpdate(
+            product._id,
+            { $inc: { sold: item.quantity } },
+            { new: true, select: 'sold' }
+          );
+          
+          console.log(`   Sold updated:`, {
+            newSold: soldUpdateResult?.sold,
+            increment: item.quantity
+          });
+          
+          if (!soldUpdateResult) {
+            console.log(`   ⚠️ WARNING: Product not found for sold update!`);
+          } else {
+            console.log(`   ✅ Sold increased: +${item.quantity} (Total: ${soldUpdateResult.sold})`);
+          }
+          
+          // ✅ VERIFY: Fetch lại product để check
+          const verifyProduct = await Product.findById(product._id);
+          const verifyVariant = verifyProduct.variants.find(
+            v => v.size === item.size && v.color === item.color
+          );
+          console.log(`   🔍 VERIFY: Stock after update = ${verifyVariant?.stock}`);
+          
+        } catch (updateError) {
+          console.error(`   ❌ Error updating product ${product._id}:`, updateError);
+          console.error(`   ❌ Error message:`, updateError.message);
+          console.error(`   ❌ Error stack:`, updateError.stack);
+        }
       }
+      
+      console.log('\n✅ Stock deduction completed');
+      console.log('📦 ========== DEDUCT STOCK (COD) END ==========\n');
+      
     } else {
       console.log('🏦 VNPay payment - Stock will be deducted after payment success');
     }
 
-    // ✅ Tạo đơn hàng với status phù hợp
+    // ✅ Tạo đơn hàng
     const order = await Order.create({
       user: req.user._id,
       items: itemsToOrder.map((i) => ({
@@ -165,8 +259,8 @@ export const createOrder = async (req, res) => {
       totalAmount: totalAmount,
       paymentMethod,
       shippingAddress,
-      status: "pending",  // ✅ Luôn là pending ban đầu
-      paymentStatus: paymentMethod === 'vnpay' ? 'pending' : 'pending',  // ✅ Cả 2 đều pending
+      status: "pending",
+      paymentStatus: paymentMethod === 'vnpay' ? 'pending' : 'pending',
     });
 
     // Load order với product info
@@ -178,7 +272,7 @@ export const createOrder = async (req, res) => {
     console.log(`📊 Status: ${order.status}`);
     console.log(`💳 Payment status: ${order.paymentStatus}`);
 
-    // ✅ QUAN TRỌNG: XỬ LÝ CART DỰA TRÊN PAYMENT METHOD
+    // ✅ XỬ LÝ CART
     if (paymentMethod === 'cod') {
       // COD: Xóa items ngay
       if (selectedItemIds && selectedItemIds.length > 0) {
@@ -198,7 +292,6 @@ export const createOrder = async (req, res) => {
     } else {
       // VNPay: GIỮ items trong cart
       console.log(`⏳ VNPay - Items kept in cart (will be removed after payment success)`);
-      // KHÔNG gửi notification/email, sẽ gửi khi callback thành công
     }
 
     console.log(`📦 ========== CREATE ORDER END ==========\n`);
@@ -315,32 +408,39 @@ export const cancelOrder = async (req, res) => {
     }
 
     // ✅ HOÀN LẠI TỒN KHO VÀ GIẢM SOLD
-console.log(`📦 Hoàn lại tồn kho...`);
-for (let item of order.items) {
-  try {
-    // Hoàn stock
-    await Product.updateOne(
-      {
-        _id: item.product._id,
-        "variants.size": item.size,
-        "variants.color": item.color
-      },
-      { $inc: { "variants.$.stock": item.quantity } }
-    );
-    
-    // ✅ THÊM: Giảm sold count
-    await Product.findByIdAndUpdate(
-      item.product._id,
-      { $inc: { sold: -item.quantity } }
-    );
-    
-    console.log(`✅ Hoàn lại ${item.quantity} sản phẩm ${item.product.name}`);
-    console.log(`✅ Giảm ${item.quantity} sold count`);
-  } catch (productErr) {
-    console.error(`❌ Error restoring stock for product ${item.product._id}:`, productErr);
-    // Continue even if one product fails
-  }
-}
+    console.log(`📦 Hoàn lại tồn kho...`);
+    for (let item of order.items) {
+      try {
+        // Hoàn stock - DÙNG arrayFilters
+        await Product.updateOne(
+          {
+            _id: item.product._id
+          },
+          { 
+            $inc: { "variants.$[elem].stock": item.quantity } 
+          },
+          {
+            arrayFilters: [
+              { 
+                "elem.size": item.size,
+                "elem.color": item.color
+              }
+            ]
+          }
+        );
+        
+        // ✅ Giảm sold count
+        await Product.findByIdAndUpdate(
+          item.product._id,
+          { $inc: { sold: -item.quantity } }
+        );
+        
+        console.log(`✅ Hoàn lại ${item.quantity} sản phẩm ${item.product.name}`);
+        console.log(`✅ Giảm ${item.quantity} sold count`);
+      } catch (productErr) {
+        console.error(`❌ Error restoring stock for product ${item.product._id}:`, productErr);
+      }
+    }
 
     // ✅ HOÀN LẠI VOUCHER (NẾU CÓ)
     if (order.voucher) {
@@ -350,10 +450,8 @@ for (let item of order.items) {
         const voucher = await Voucher.findById(order.voucher);
         
         if (voucher) {
-          // Tăng quantity
           voucher.quantity += 1;
           
-          // Xóa user khỏi danh sách usedBy (nếu có field này)
           if (voucher.usedBy && Array.isArray(voucher.usedBy)) {
             voucher.usedBy = voucher.usedBy.filter(
               uid => uid.toString() !== userId.toString()
@@ -363,16 +461,11 @@ for (let item of order.items) {
           await voucher.save();
           
           console.log(`✅ Đã hoàn lại voucher ${order.voucherCode}`);
-          console.log(`✅ Quantity: ${voucher.quantity}`);
-          if (voucher.usedBy) {
-            console.log(`✅ UsedBy length: ${voucher.usedBy.length}`);
-          }
         } else {
           console.log(`⚠️ Voucher ${order.voucher} not found, skipping restore`);
         }
       } catch (voucherErr) {
         console.error(`❌ Error restoring voucher:`, voucherErr);
-        // Continue even if voucher restore fails
       }
     }
 
@@ -388,7 +481,6 @@ for (let item of order.items) {
       await notifyOrderStatusChange(userId, order, "cancelled");
     } catch (notifyErr) {
       console.error('❌ Error sending notification:', notifyErr);
-      // Continue even if notification fails
     }
 
     // Load lại order với đầy đủ thông tin
@@ -410,10 +502,9 @@ for (let item of order.items) {
   }
 };
 
-/**
- * TẠO ORDER TỪ PAYMENT INTENT
- * POST /api/orders/create-from-intent
- */
+// ------------------------------------------------------
+// ✅ TẠO ORDER TỪ PAYMENT INTENT (VNPAY)
+// ------------------------------------------------------
 export const createOrderFromIntent = async (req, res) => {
   try {
     const { intentId } = req.body;
@@ -474,21 +565,47 @@ export const createOrderFromIntent = async (req, res) => {
 
     console.log("✅ Intent validated. Creating order...");
 
+    // ✅ VALIDATE STOCK
+    console.log('\n🔍 ========== VALIDATE STOCK ==========');
     for (let item of intent.items) {
       const product = await Product.findById(item.product._id);
       
       if (!product) {
+        console.log(`❌ Product not found: ${item.product._id}`);
         return res.status(400).json({
           success: false,
           message: `Product ${item.product.name} not found`,
         });
       }
+      
+      console.log(`\n📦 Product: ${product.name}`);
+      console.log(`   Size: ${item.size}`);
+      console.log(`   Color: ${item.color}`);
+      console.log(`   Quantity: ${item.quantity}`);
 
       const variant = product.variants.find(
         (v) => v.size === item.size && v.color === item.color
       );
 
-      if (!variant || variant.stock < item.quantity) {
+      if (!variant) {
+        console.log(`❌ Variant NOT FOUND!`);
+        console.log(`   Available variants:`, product.variants.map(v => ({
+          size: v.size,
+          color: v.color,
+          stock: v.stock
+        })));
+        
+        return res.status(400).json({
+          success: false,
+          message: `Không tìm thấy size ${item.size} màu ${item.color} cho ${product.name}`,
+        });
+      }
+      
+      console.log(`   ✅ Variant found:`);
+      console.log(`      Current stock: ${variant.stock}`);
+      
+      if (variant.stock < item.quantity) {
+        console.log(`❌ Not enough stock! (Need ${item.quantity}, Have ${variant.stock})`);
         return res.status(400).json({
           success: false,
           message: `Not enough stock for ${product.name}`,
@@ -497,29 +614,93 @@ export const createOrderFromIntent = async (req, res) => {
     }
 
     console.log("✅ Stock validated");
+    console.log('🔍 ========== VALIDATE STOCK END ==========\n');
 
-    console.log("📦 Deducting stock...");
-    for (let item of intent.items) {
+    // ✅ TRỪ STOCK VÀ TĂNG SOLD
+    console.log('\n📦 ========== DEDUCT STOCK (VNPAY) ==========');
+    console.log(`Processing ${intent.items.length} items...`);
+
+    for (let i = 0; i < intent.items.length; i++) {
+      const item = intent.items[i];
+      const product = await Product.findById(item.product._id);
+      
+      if (!product) {
+        console.log(`❌ Product not found: ${item.product._id}`);
+        continue;
+      }
+      
+      console.log(`\n[${i+1}/${intent.items.length}] Processing: ${product.name}`);
+      console.log(`   Product ID: ${product._id}`);
+      console.log(`   Size: ${item.size}`);
+      console.log(`   Color: ${item.color}`);
+      console.log(`   Quantity: ${item.quantity}`);
+      
       try {
-        await Product.updateOne(
+        // ✅ TRỪ STOCK - DÙNG arrayFilters
+        const stockUpdateResult = await Product.updateOne(
           {
-            _id: item.product._id,
-            "variants.size": item.size,
-            "variants.color": item.color,
+            _id: product._id
           },
-          { $inc: { "variants.$.stock": -item.quantity } }
+          { 
+            $inc: { "variants.$[elem].stock": -item.quantity } 
+          },
+          {
+            arrayFilters: [
+              { 
+                "elem.size": item.size,
+                "elem.color": item.color
+              }
+            ]
+          }
         );
-
-        await Product.findByIdAndUpdate(item.product._id, {
-          $inc: { sold: item.quantity },
+        
+        console.log(`   Stock update result:`, {
+          matched: stockUpdateResult.matchedCount,
+          modified: stockUpdateResult.modifiedCount,
+          acknowledged: stockUpdateResult.acknowledged
         });
+        
+        if (stockUpdateResult.modifiedCount === 0) {
+          console.log(`   ⚠️ WARNING: Stock NOT modified!`);
+        } else {
+          console.log(`   ✅ Stock deducted: -${item.quantity}`);
+        }
 
-        console.log(`✅ ${item.product.name}: -${item.quantity} stock, +${item.quantity} sold`);
+        // ✅ TĂNG SOLD
+        const soldUpdateResult = await Product.findByIdAndUpdate(
+          product._id,
+          { $inc: { sold: item.quantity } },
+          { new: true, select: 'sold' }
+        );
+        
+        console.log(`   Sold updated:`, {
+          newSold: soldUpdateResult?.sold,
+          increment: item.quantity
+        });
+        
+        if (!soldUpdateResult) {
+          console.log(`   ⚠️ WARNING: Product not found for sold update!`);
+        } else {
+          console.log(`   ✅ Sold increased: +${item.quantity} (Total: ${soldUpdateResult.sold})`);
+        }
+
+        // ✅ VERIFY: Fetch lại product để check
+        const verifyProduct = await Product.findById(product._id);
+        const verifyVariant = verifyProduct.variants.find(
+          v => v.size === item.size && v.color === item.color
+        );
+        console.log(`   🔍 VERIFY: Stock after update = ${verifyVariant?.stock}`);
+
       } catch (productErr) {
-        console.error(`❌ Error updating product ${item.product._id}:`, productErr);
+        console.error(`   ❌ Error updating product ${product._id}:`, productErr);
+        console.error(`   ❌ Error message:`, productErr.message);
       }
     }
 
+    console.log('\n✅ Stock deduction completed');
+    console.log('📦 ========== DEDUCT STOCK (VNPAY) END ==========\n');
+
+    // ✅ TẠO ORDER
     const order = await Order.create({
       user: userId,
       items: intent.items.map((item) => ({
@@ -551,6 +732,7 @@ export const createOrderFromIntent = async (req, res) => {
       .populate("items.product", "name images")
       .populate("voucher");
 
+    // ✅ XÓA ITEMS KHỎI CART
     console.log("🗑️ Removing items from cart...");
     try {
       const cart = await Cart.findOne({ user: userId });
@@ -575,6 +757,7 @@ export const createOrderFromIntent = async (req, res) => {
       console.error("❌ Error removing cart items:", cartErr);
     }
 
+    // ✅ GỬI NOTIFICATION & EMAIL
     console.log("📧 Sending notifications...");
     try {
       await sendOrderEmail(req.user.email, fullOrder);
@@ -593,6 +776,7 @@ export const createOrderFromIntent = async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Create order from intent error:", error);
+    console.error("❌ Error stack:", error.stack);
     return res.status(500).json({
       success: false,
       message: error.message,
