@@ -21,7 +21,7 @@ const productSchema = mongoose.Schema(
     slug: { type: String, unique: true, required: true },
     description: { type: String },
 
-    images: [imageSchema],   // ⬅️ Sửa từ [String] thành [imageSchema]
+    images: [imageSchema],   
 
     category: {
       type: mongoose.Schema.Types.ObjectId,
