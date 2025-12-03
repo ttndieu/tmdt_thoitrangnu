@@ -25,7 +25,7 @@ class WishlistProvider with ChangeNotifier {
     return _wishlistIds.contains(productId);
   }
 
-  // ✅ FIXED: Fetch wishlist with better error handling
+  // FIXED: Fetch wishlist with better error handling
   Future<void> fetchWishlist() async {
     _isLoading = true;
     _error = null;
@@ -34,26 +34,26 @@ class WishlistProvider with ChangeNotifier {
     try {
       final response = await _apiClient.get(ApiConfig.WISHLIST);
 
-      print('🔍 Wishlist Response: ${response.statusCode}');
-      print('🔍 Wishlist Data Type: ${response.data.runtimeType}');
-      print('🔍 Wishlist Data: ${response.data}');
+      print('Wishlist Response: ${response.statusCode}');
+      print('Wishlist Data Type: ${response.data.runtimeType}');
+      print('Wishlist Data: ${response.data}');
 
       if (response.statusCode == 200) {
         // Check if response has wishlist field
         if (response.data is Map && response.data.containsKey('wishlist')) {
           final dynamic wishlistData = response.data['wishlist'];
           
-          print('🔍 Wishlist Array Type: ${wishlistData.runtimeType}');
+          print('Wishlist Array Type: ${wishlistData.runtimeType}');
           
           if (wishlistData is List) {
             if (wishlistData.isEmpty) {
-              print('✅ Wishlist is empty');
+              print('Wishlist is empty');
               _wishlist = [];
               _wishlistIds = {};
             } else {
-              print('🔍 First item type: ${wishlistData.first.runtimeType}');
+              print('First item type: ${wishlistData.first.runtimeType}');
               
-              // ✅ Parse products
+              // Parse products
               _wishlist = [];
               _wishlistIds = {};
               
@@ -72,15 +72,15 @@ class WishlistProvider with ChangeNotifier {
                   } else if (item is String) {
                     // If only IDs, add to set
                     _wishlistIds.add(item);
-                    print('⚠️ Wishlist contains only ID: $item');
+                    print('Wishlist contains only ID: $item');
                   }
                 } catch (e) {
-                  print('⚠️ Failed to parse product: $e');
-                  print('⚠️ Item: $item');
+                  print('Failed to parse product: $e');
+                  print('Item: $item');
                 }
               }
               
-              print('✅ Wishlist loaded: ${_wishlist.length} products');
+              print('Wishlist loaded: ${_wishlist.length} products');
             }
           } else {
             throw Exception('Wishlist is not a List');
@@ -93,8 +93,8 @@ class WishlistProvider with ChangeNotifier {
       }
     } catch (e, stackTrace) {
       _error = 'Không thể tải danh sách yêu thích';
-      print('❌ Error fetching wishlist: $e');
-      print('❌ Stack trace: $stackTrace');
+      print('Error fetching wishlist: $e');
+      print('Stack trace: $stackTrace');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -118,7 +118,7 @@ class WishlistProvider with ChangeNotifier {
       }
       return false;
     } catch (e) {
-      print('❌ Error adding to wishlist: $e');
+      print('Error adding to wishlist: $e');
       return false;
     }
   }
@@ -130,7 +130,7 @@ class WishlistProvider with ChangeNotifier {
         '${ApiConfig.WISHLIST}/$productId',
       );
 
-      print('🔍 Remove wishlist response: ${response.statusCode}');
+      print('Remove wishlist response: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         _wishlistIds.remove(productId);
@@ -140,7 +140,7 @@ class WishlistProvider with ChangeNotifier {
       }
       return false;
     } catch (e) {
-      print('❌ Error removing from wishlist: $e');
+      print('Error removing from wishlist: $e');
       return false;
     }
   }

@@ -37,7 +37,7 @@ class HomeProvider with ChangeNotifier {
   sorted.sort((a, b) => b.sold.compareTo(a.sold));
 
     // THÊM DEBUG LOG
-  print('📊 === FEATURED PRODUCTS DEBUG ===');
+  print('=== FEATURED PRODUCTS DEBUG ===');
   for (var i = 0; i < (sorted.length > 5 ? 5 : sorted.length); i++) {
     print('${i + 1}. ${sorted[i].name} - Sold: ${sorted[i].sold}');
   }

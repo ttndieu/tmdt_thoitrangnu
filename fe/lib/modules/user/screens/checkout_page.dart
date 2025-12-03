@@ -57,12 +57,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   // NẾU KHÔNG CÓ: Gọi API check từ server
   if (intent == null) {
-    print('🔍 No intent in provider, checking from server...');
+    print('No intent in provider, checking from server...');
     intent = await orderProvider.checkPendingPaidIntent();
   }
 
   if (intent != null && intent.isPaid && intent.paymentMethod == 'vnpay') {
-    print('✅ Found paid intent: ${intent.id}');
+    print('Found paid intent: ${intent.id}');
     setState(() {
       _paidIntentId = intent!.id;
       _paymentMethod = 'vnpay';
@@ -575,9 +575,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
-  // ✅ ORDER SUMMARY - HIỂN THỊ CHI TIẾT TỪ INTENT KHI ĐÃ THANH TOÁN
+  // ORDER SUMMARY - HIỂN THỊ CHI TIẾT TỪ INTENT KHI ĐÃ THANH TOÁN
   Widget _buildOrderSummary(CartProvider cartProvider) {
-    // ✅ NẾU ĐÃ THANH TOÁN - HIỂN THỊ CHI TIẾT TỪ INTENT
+    // NẾU ĐÃ THANH TOÁN - HIỂN THỊ CHI TIẾT TỪ INTENT
     if (_paidIntentId != null) {
       final intent = context.read<OrderProvider>().currentIntent;
       
@@ -600,7 +600,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
               const Divider(height: 20),
               _buildSummaryRow('Tổng cộng', intent.totalAmount, isTotal: true),
               const SizedBox(height: 12),
-              // ✅ BOX THÔNG BÁO ĐÃ THANH TOÁN
+              // BOX THÔNG BÁO ĐÃ THANH TOÁN
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -631,7 +631,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
       }
     }
 
-    // ✅ CHƯA THANH TOÁN - HIỂN THỊ BÌNH THƯỜNG
+    // CHƯA THANH TOÁN - HIỂN THỊ BÌNH THƯỜNG
     const shippingFee = 15000.0;
     final subtotal = _calculateTotal(cartProvider);
     final total = subtotal + shippingFee - _discount;
@@ -691,19 +691,19 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
-  // ✅ BOTTOM BAR - HIỂN THỊ 0đ KHI ĐÃ THANH TOÁN
+  // BOTTOM BAR - HIỂN THỊ 0đ KHI ĐÃ THANH TOÁN
   Widget _buildBottomBar(CartProvider cartProvider) {
-    // ✅ TÍNH TOTAL
+    // TÍNH TOTAL
     double displayTotal;
     double? paidAmount;
     
     if (_paidIntentId != null) {
-      // ✅ ĐÃ THANH TOÁN - HIỂN THỊ 0đ
+      // ĐÃ THANH TOÁN - HIỂN THỊ 0đ
       final intent = context.read<OrderProvider>().currentIntent;
-      displayTotal = 0.0;  // ✅ HIỂN THỊ 0đ
+      displayTotal = 0.0;  // HIỂN THỊ 0đ
       paidAmount = intent?.totalAmount;  // LƯU SỐ TIỀN ĐÃ THANH TOÁN
     } else {
-      // ✅ CHƯA THANH TOÁN - TÍNH BÌNH THƯỜNG
+      // CHƯA THANH TOÁN - TÍNH BÌNH THƯỜNG
       const shippingFee = 15000.0;
       final subtotal = _calculateTotal(cartProvider);
       displayTotal = subtotal + shippingFee - _discount;
@@ -757,7 +757,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       color: _paidIntentId != null ? Colors.green : AppColors.primary,
                     ),
                   ),
-                  // ✅ HIỂN THỊ SỐ TIỀN ĐÃ THANH TOÁN
+                  // HIỂN THỊ SỐ TIỀN ĐÃ THANH TOÁN
                   if (paidAmount != null)
                     Text(
                       'Đã thanh toán ${paidAmount.toCurrency()} qua VNPay',
@@ -819,7 +819,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     if (_selectedAddress == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('❌ Vui lòng chọn địa chỉ giao hàng'),
+          content: Text('Vui lòng chọn địa chỉ giao hàng'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -830,7 +830,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     if (cartProvider.selectedCount == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('❌ Vui lòng chọn ít nhất 1 sản phẩm'),
+          content: Text('Vui lòng chọn ít nhất 1 sản phẩm'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -843,8 +843,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
       final selectedItemIds =
           cartProvider.selectedItems.map((item) => item.id).toList();
 
-      print('🏦 VNPay payment - Creating intent...');
-
       final intent = await context.read<OrderProvider>().createPaymentIntent(
             paymentMethod: 'vnpay',
             shippingAddress: _selectedAddress!.toJson(),
@@ -856,9 +854,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
         throw Exception('Không thể tạo payment intent');
       }
 
-      print('✅ Intent created: ${intent.id}');
-      print('💳 Creating VNPay URL...');
-
       final paymentResponse = await context
           .read<OrderProvider>()
           .createVNPayPaymentFromIntent(intentId: intent.id);
@@ -867,9 +862,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
         throw Exception(
             paymentResponse.message ?? 'Không thể tạo link thanh toán');
       }
-
-      print('✅ Opening VNPay WebView...');
-
       if (mounted) {
         final result = await Navigator.push(
           context,
@@ -882,7 +874,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
         );
 
         if (result == true && mounted) {
-          print('✅ Payment successful, refreshing intent...');
 
           final updatedIntent = await context
               .read<OrderProvider>()
@@ -903,7 +894,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
             );
           }
         } else if (result == false && mounted) {
-          print('❌ Payment failed');
+          print('Payment failed');
 
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -914,7 +905,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
         }
       }
     } catch (e) {
-      print('❌ Pay VNPay error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -960,7 +950,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
           cartProvider.selectedItems.map((item) => item.id).toList();
 
       if (_paidIntentId != null) {
-        print('🎯 Creating order from paid intent: $_paidIntentId');
 
         final order = await context
             .read<OrderProvider>()
@@ -969,8 +958,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
         if (order == null) {
           throw Exception('Không thể tạo đơn hàng');
         }
-
-        print('✅ Order created: ${order.id}');
 
         if (mounted) {
           await context.read<CartProvider>().fetchCart();
@@ -988,7 +975,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
       }
 
       if (_paymentMethod == 'cod') {
-        print('💵 COD payment - Creating order...');
 
         final order = await context.read<OrderProvider>().createOrderFromCart(
               paymentMethod: 'cod',
@@ -1000,8 +986,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
         if (order == null) {
           throw Exception('Không thể tạo đơn hàng');
         }
-
-        print('✅ Order created: ${order.id}');
 
         if (mounted) {
           await context.read<CartProvider>().fetchCart();
@@ -1019,11 +1003,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
       throw Exception('Vui lòng thanh toán VNPay trước');
     } catch (e) {
-      print('❌ Place order error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('❌ Lỗi: $e'),
+            content: Text('Lỗi: $e'),
             backgroundColor: AppColors.error,
             duration: const Duration(seconds: 5),
           ),

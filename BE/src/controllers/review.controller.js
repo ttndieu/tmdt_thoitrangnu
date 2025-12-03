@@ -10,20 +10,14 @@ export const createReview = async (req, res) => {
     const { productId, orderId, rating, comment, images } = req.body;
     const userId = req.user._id;
 
-    console.log(`\n⭐ ========== CREATE REVIEW ==========`);
-    console.log(`👤 User: ${userId}`);
-    console.log(`📦 Product: ${productId}`);
-    console.log(`📝 Order: ${orderId}`);
-    console.log(`⭐ Rating: ${rating}`);
-
-    // ✅ VALIDATE required fields
+    // VALIDATE required fields
     if (!productId || !orderId || !rating) {
       return res.status(400).json({
         message: "Thiếu thông tin bắt buộc (productId, orderId, rating)",
       });
     }
 
-    // ✅ CHECK: Order có tồn tại và thuộc về user không?
+    // CHECK: Order có tồn tại và thuộc về user không?
     const order = await Order.findOne({
       _id: orderId,
       user: userId,
@@ -36,7 +30,7 @@ export const createReview = async (req, res) => {
       });
     }
 
-    // ✅ CHECK: Order có chứa product này không?
+    // CHECK: Order có chứa product này không?
     const hasProduct = order.items.some(
       (item) => item.product._id.toString() === productId
     );
@@ -47,7 +41,7 @@ export const createReview = async (req, res) => {
       });
     }
 
-    // ✅ CHECK: User đã review product này chưa?
+    // CHECK: User đã review product này chưa?
     const existingReview = await Review.findOne({
       user: userId,
       product: productId,
@@ -59,14 +53,14 @@ export const createReview = async (req, res) => {
       });
     }
 
-    // ✅ VALIDATE rating
+    // VALIDATE rating
     if (rating < 1 || rating > 5) {
       return res.status(400).json({
         message: "Rating phải từ 1-5 sao",
       });
     }
 
-    // ✅ CREATE REVIEW
+    // CREATE REVIEW
     const review = await Review.create({
       user: userId,
       product: productId,
@@ -76,7 +70,7 @@ export const createReview = async (req, res) => {
       images: images || [],
     });
 
-    // ✅ UPDATE PRODUCT RATING
+    // UPDATE PRODUCT RATING
     await updateProductRating(productId);
 
     // Load review với thông tin user
@@ -84,12 +78,9 @@ export const createReview = async (req, res) => {
       .populate("user", "name avatar")
       .populate("product", "name images");
 
-    console.log(`✅ Review created: ${review._id}`);
-    console.log(`⭐ ========== CREATE REVIEW END ==========\n`);
-
     return res.status(201).json({ review: fullReview });
   } catch (err) {
-    console.error("❌ Create review error:", err);
+    console.error("Create review error:", err);
     return res.status(500).json({ message: err.message });
   }
 };
@@ -101,9 +92,6 @@ export const getReviewsByProduct = async (req, res) => {
   try {
     const { productId } = req.params;
     const { page = 1, limit = 10, sort = "newest" } = req.query;
-
-    console.log(`\n📋 Fetching reviews for product: ${productId}`);
-    console.log(`📄 Page: ${page}, Limit: ${limit}, Sort: ${sort}`);
 
     let sortOption = { createdAt: -1 }; // Mặc định: mới nhất
 
@@ -123,8 +111,6 @@ export const getReviewsByProduct = async (req, res) => {
 
     const count = await Review.countDocuments({ product: productId });
 
-    console.log(`✅ Found ${reviews.length} reviews (Total: ${count})`);
-
     return res.json({
       reviews,
       totalPages: Math.ceil(count / limit),
@@ -132,7 +118,7 @@ export const getReviewsByProduct = async (req, res) => {
       total: count,
     });
   } catch (err) {
-    console.error("❌ Get reviews error:", err);
+    console.error("Get reviews error:", err);
     return res.status(500).json({ message: err.message });
   }
 };
@@ -144,17 +130,13 @@ export const getMyReviews = async (req, res) => {
   try {
     const userId = req.user._id;
 
-    console.log(`\n📋 Fetching reviews for user: ${userId}`);
-
     const reviews = await Review.find({ user: userId })
       .populate("product", "name images")
       .sort({ createdAt: -1 });
 
-    console.log(`✅ Found ${reviews.length} reviews`);
-
     return res.json({ reviews });
   } catch (err) {
-    console.error("❌ Get my reviews error:", err);
+    console.error("Get my reviews error:", err);
     return res.status(500).json({ message: err.message });
   }
 };
@@ -168,15 +150,13 @@ export const updateReview = async (req, res) => {
     const { rating, comment, images } = req.body;
     const userId = req.user._id;
 
-    console.log(`\n✏️ Updating review: ${reviewId}`);
-
     const review = await Review.findById(reviewId);
 
     if (!review) {
       return res.status(404).json({ message: "Không tìm thấy đánh giá" });
     }
 
-    // ✅ CHECK: Review có thuộc về user này không?
+    // CHECK: Review có thuộc về user này không?
     if (review.user.toString() !== userId.toString()) {
       return res.status(403).json({
         message: "Bạn không có quyền sửa đánh giá này",
@@ -197,18 +177,16 @@ export const updateReview = async (req, res) => {
 
     await review.save();
 
-    // ✅ UPDATE PRODUCT RATING
+    // UPDATE PRODUCT RATING
     await updateProductRating(review.product);
 
     const updatedReview = await Review.findById(reviewId)
       .populate("user", "name avatar")
       .populate("product", "name images");
 
-    console.log(`✅ Review updated: ${reviewId}`);
-
     return res.json({ review: updatedReview });
   } catch (err) {
-    console.error("❌ Update review error:", err);
+    console.error("Update review error:", err);
     return res.status(500).json({ message: err.message });
   }
 };
@@ -222,15 +200,13 @@ export const deleteReview = async (req, res) => {
     const userId = req.user._id;
     const userRole = req.user.role;
 
-    console.log(`\n🗑️ Deleting review: ${reviewId}`);
-
     const review = await Review.findById(reviewId);
 
     if (!review) {
       return res.status(404).json({ message: "Không tìm thấy đánh giá" });
     }
 
-    // ✅ CHECK: User sở hữu review hoặc là admin
+    // CHECK: User sở hữu review hoặc là admin
     if (review.user.toString() !== userId.toString() && userRole !== "admin") {
       return res.status(403).json({
         message: "Bạn không có quyền xóa đánh giá này",
@@ -240,14 +216,12 @@ export const deleteReview = async (req, res) => {
     const productId = review.product;
     await Review.findByIdAndDelete(reviewId);
 
-    // ✅ UPDATE PRODUCT RATING
+    // UPDATE PRODUCT RATING
     await updateProductRating(productId);
-
-    console.log(`✅ Review deleted: ${reviewId}`);
 
     return res.json({ message: "Đã xóa đánh giá" });
   } catch (err) {
-    console.error("❌ Delete review error:", err);
+    console.error("Delete review error:", err);
     return res.status(500).json({ message: err.message });
   }
 };
@@ -260,9 +234,7 @@ export const checkCanReview = async (req, res) => {
     const { productId } = req.params;
     const userId = req.user._id;
 
-    console.log(`\n🔍 Checking can review for product: ${productId}`);
-
-    // ✅ CHECK: User có order completed chứa product này không?
+    // CHECK: User có order completed chứa product này không?
     const completedOrder = await Order.findOne({
       user: userId,
       status: "completed",
@@ -270,21 +242,19 @@ export const checkCanReview = async (req, res) => {
     }).sort({ createdAt: -1 });
 
     if (!completedOrder) {
-      console.log(`❌ User hasn't purchased this product`);
       return res.json({
         canReview: false,
         reason: "Bạn chưa mua sản phẩm này",
       });
     }
 
-    // ✅ CHECK: User đã review chưa?
+    // CHECK: User đã review chưa?
     const existingReview = await Review.findOne({
       user: userId,
       product: productId,
     });
 
     if (existingReview) {
-      console.log(`❌ User already reviewed this product`);
       return res.json({
         canReview: false,
         reason: "Bạn đã đánh giá sản phẩm này",
@@ -296,15 +266,12 @@ export const checkCanReview = async (req, res) => {
       });
     }
 
-    console.log(`✅ User can review this product`);
-    console.log(`📝 Order ID: ${completedOrder._id}`);
-
     return res.json({
       canReview: true,
       orderId: completedOrder._id,
     });
   } catch (err) {
-    console.error("❌ Check can review error:", err);
+    console.error("Check can review error:", err);
     return res.status(500).json({ message: err.message });
   }
 };
@@ -321,7 +288,6 @@ async function updateProductRating(productId) {
         averageRating: 0,
         reviewCount: 0,
       });
-      console.log(`✅ Reset rating for product ${productId}`);
       return;
     }
 
@@ -332,11 +298,7 @@ async function updateProductRating(productId) {
       averageRating: Math.round(averageRating * 10) / 10, // Round to 1 decimal
       reviewCount: reviews.length,
     });
-
-    console.log(
-      `✅ Updated product ${productId} rating: ${averageRating.toFixed(1)} (${reviews.length} reviews)`
-    );
   } catch (err) {
-    console.error(`❌ Error updating product rating:`, err);
+    console.error(`Error updating product rating:`, err);
   }
 }

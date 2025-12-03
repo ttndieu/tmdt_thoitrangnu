@@ -89,7 +89,7 @@ class _ReviewsPageState extends State<ReviewsPage> {
   }
 
 Widget _buildRatingOverview() {
-  // ✅ SAFE ACCESS: Check và default to 0
+  // SAFE ACCESS: Check và default to 0
   final averageRating = widget.product.averageRating;
   final reviewCount = widget.product.reviewCount;
   final hasValidRating = widget.product.hasValidRating;
@@ -99,7 +99,7 @@ Widget _buildRatingOverview() {
     padding: const EdgeInsets.all(20),
     child: Row(
       children: [
-        // ✅ Big Rating Number
+        // Big Rating Number
         Column(
           children: [
             Text(
@@ -126,7 +126,7 @@ Widget _buildRatingOverview() {
 
         const SizedBox(width: 32),
 
-        // ✅ Rating Bars
+        // Rating Bars
         Expanded(
           child: Column(
             children: List.generate(5, (index) {
@@ -141,7 +141,7 @@ Widget _buildRatingOverview() {
 }
 
 Widget _buildRatingBar(int star) {
-  // ✅ TÍNH % THỰC TẾ TỪ REVIEWS
+  // TÍNH % THỰC TẾ TỪ REVIEWS
   final reviewProvider = context.watch<ReviewProvider>();
   final totalReviews = reviewProvider.reviews.length;
   
@@ -182,7 +182,7 @@ Widget _buildRatingBar(int star) {
     );
   }
 
-  // ✅ ĐẾM SỐ REVIEW CÓ RATING = star
+  // ĐẾM SỐ REVIEW CÓ RATING = star
   final countWithRating = reviewProvider.reviews
       .where((review) => review.rating == star)
       .length;
@@ -202,11 +202,11 @@ Widget _buildRatingBar(int star) {
         ),
         const SizedBox(width: 4),
         
-        // ✅ ICON SAO
+        // ICON SAO
         const Icon(Icons.star, size: 14, color: Colors.amber),
         const SizedBox(width: 8),
         
-        // ✅ PROGRESS BAR
+        // PROGRESS BAR
         Expanded(
           child: ClipRRect(
             borderRadius: BorderRadius.circular(4),
@@ -220,7 +220,7 @@ Widget _buildRatingBar(int star) {
         ),
         const SizedBox(width: 8),
         
-        // ✅ SỐ LƯỢNG + %
+        // SỐ LƯỢNG + %
         SizedBox(
           width: 60,
           child: Text(
@@ -324,7 +324,7 @@ Widget _buildRatingBar(int star) {
           itemCount: reviewProvider.reviews.length + 1,
           itemBuilder: (context, index) {
             if (index == reviewProvider.reviews.length) {
-              // ✅ Load more indicator
+              // Load more indicator
               if (reviewProvider.currentPage < reviewProvider.totalPages) {
                 return const Padding(
                   padding: EdgeInsets.all(16),

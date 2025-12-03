@@ -90,11 +90,9 @@ orderSchema.pre('save', async function(next) {
       // Simpler and unique
       const shortId = this._id.toString().slice(-6).toUpperCase();
       this.orderNumber = `#${shortId}`;
-      
-      console.log(`✅ Generated short order number: ${this.orderNumber}`);
 
     } catch (error) {
-      console.error('❌ Error generating order number:', error);
+      console.error('Error generating order number:', error);
       // Fallback
       this.orderNumber = `#${Date.now().toString(36).slice(-6).toUpperCase()}`;
     }

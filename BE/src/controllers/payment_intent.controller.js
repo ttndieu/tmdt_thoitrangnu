@@ -15,12 +15,6 @@ class PaymentIntentController {
       const { paymentMethod, shippingAddress, voucherId, selectedItemIds } = req.body;
       const userId = req.user._id;
 
-      console.log("\n💫 ========== CREATE PAYMENT INTENT ==========");
-      console.log("👤 User:", userId);
-      console.log("💳 Payment method:", paymentMethod);
-      console.log("🎫 Voucher ID:", voucherId || "None");
-      console.log("🛒 Selected items:", selectedItemIds?.length || "All");
-
       if (!["cod", "vnpay"].includes(paymentMethod)) {
         return res.status(400).json({
           success: false,
@@ -50,8 +44,6 @@ class PaymentIntentController {
         itemsToProcess = cart.items.filter((item) =>
           selectedItemIds.includes(item._id.toString())
         );
-
-        console.log(`✅ Filtered ${itemsToProcess.length} items from ${cart.items.length} total`);
 
         if (itemsToProcess.length === 0) {
           return res.status(400).json({
@@ -95,11 +87,7 @@ class PaymentIntentController {
           size: item.size,
           color: item.color,
         });
-
-        console.log(`✅ ${product.name}: ${item.quantity} x ${variant.price}đ = ${itemPrice}đ`);
       }
-
-      console.log(`💰 Original amount: ${originalAmount}đ`);
 
       // APPLY VOUCHER
       let discount = 0;
@@ -153,23 +141,14 @@ class PaymentIntentController {
 
         voucher.quantity -= 1;
         await voucher.save();
-
-        console.log(`🎫 Applied: ${voucherCode} → Discount: ${discount}đ`);
       }
 
       // CRITICAL FIX: ADD SHIPPING FEE
       const shippingFee = 15000; // VND
-      console.log(`🚚 Shipping fee: ${shippingFee}đ`);
 
       // CALCULATE TOTAL WITH SHIPPING FEE
       const totalAmount = originalAmount - discount + shippingFee;
       
-      console.log('   Calculation:');
-      console.log(`   Original: ${originalAmount}đ`);
-      console.log(`   Discount: -${discount}đ`);
-      console.log(`   Shipping: +${shippingFee}đ`);
-      console.log(`   Total: ${totalAmount}đ`);
-
       // CREATE INTENT WITH SHIPPING FEE
       const intent = await PaymentIntent.create({
         user: userId,
@@ -184,11 +163,6 @@ class PaymentIntentController {
         shippingAddress,
         paymentStatus: "pending",
       });
-
-      console.log("✅ Intent created:", intent._id);
-      console.log("💰 Total amount (with shipping):", intent.totalAmount);
-      console.log("⏰ Expires at:", intent.expiresAt);
-      console.log("💫 ========== CREATE PAYMENT INTENT END ==========\n");
 
       res.status(201).json({
         success: true,
@@ -206,7 +180,7 @@ class PaymentIntentController {
         },
       });
     } catch (error) {
-      console.error("❌ Create intent error:", error);
+      console.error("Create intent error:", error);
       res.status(500).json({
         success: false,
         message: error.message,
@@ -246,7 +220,7 @@ class PaymentIntentController {
         intent,
       });
     } catch (error) {
-      console.error("❌ Get intent error:", error);
+      console.error("Get intent error:", error);
       res.status(500).json({
         success: false,
         message: error.message,
@@ -262,10 +236,6 @@ class PaymentIntentController {
     try {
       const { id } = req.params;
       const userId = req.user._id;
-
-      console.log("\n🚫 ========== CANCEL INTENT ==========");
-      console.log("👤 User:", userId);
-      console.log("🎯 Intent ID:", id);
 
       const intent = await PaymentIntent.findById(id)
         .populate("items.product", "name")
@@ -286,44 +256,30 @@ class PaymentIntentController {
       }
 
       if (intent.order) {
-        console.log("❌ Intent already has order:", intent.order);
+        console.log("Intent already has order:", intent.order);
         return res.status(400).json({
           success: false,
           message: "Intent đã được tạo order, không thể hủy",
         });
       }
 
-      console.log(`✅ Intent status: ${intent.paymentStatus}`);
-
       if (intent.voucher) {
-        console.log(`🎫 Restoring voucher: ${intent.voucherCode}`);
         
         try {
           const voucher = await Voucher.findById(intent.voucher);
           if (voucher) {
             voucher.quantity += 1;
             await voucher.save();
-            console.log(`✅ Voucher restored: ${voucher.quantity} remaining`);
           }
         } catch (voucherErr) {
-          console.error("❌ Error restoring voucher:", voucherErr);
+          console.error("Error restoring voucher:", voucherErr);
         }
       }
 
       intent.paymentStatus = "cancelled";
       await intent.save();
 
-      console.log(`✅ Intent cancelled`);
-
       if (intent.paymentMethod === "vnpay" && intent.vnpTransactionNo) {
-        console.log("💳 VNPay payment detected");
-        console.log("   Transaction No:", intent.vnpTransactionNo);
-        console.log("   Amount:", intent.totalAmount);
-        console.log("⚠️ MANUAL REFUND REQUIRED");
-        console.log("   Intent ID:", intent._id);
-        console.log("   User ID:", userId);
-        console.log("   TxnRef:", intent.transactionId);
-        console.log("   Amount:", intent.totalAmount);
         
         return res.json({
           success: true,
@@ -333,15 +289,13 @@ class PaymentIntentController {
         });
       }
 
-      console.log("🚫 ========== CANCEL INTENT END ==========\n");
-
       res.json({
         success: true,
         intent,
         message: "Đã hủy thành công",
       });
     } catch (error) {
-      console.error("❌ Cancel intent error:", error);
+      console.error("Cancel intent error:", error);
       res.status(500).json({
         success: false,
         message: error.message,
