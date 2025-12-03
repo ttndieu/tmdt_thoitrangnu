@@ -30,7 +30,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
   OrderModel? _order;
   bool _isLoading = true;
   
-  // ✅ Track review status cho từng product
+  // Track review status cho từng product
   Map<String, bool> _reviewStatus = {};
   final ApiClient _apiClient = ApiClient();
 
@@ -52,13 +52,13 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
       _isLoading = false;
     });
 
-    // ✅ Load review status for all products
+    // Load review status for all products
     if (_order != null && _order!.status == 'completed') {
       await _loadReviewStatus();
     }
   }
 
-  // ✅ LOAD REVIEW STATUS CHO TẤT CẢ PRODUCTS
+  // LOAD REVIEW STATUS CHO TẤT CẢ PRODUCTS
   Future<void> _loadReviewStatus() async {
     final reviewProvider = context.read<ReviewProvider>();
     
@@ -130,7 +130,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
         const SizedBox(height: 16),
         _buildPaymentSummary(),
 
-        // ✅ NÚT HỦY ĐƠN (CHỈ HIỆN KHI STATUS = PENDING)
+        // NÚT HỦY ĐƠN (CHỈ HIỆN KHI STATUS = PENDING)
         if (_order!.status == 'pending') ...[
           const SizedBox(height: 24),
           _buildCancelButton(),
@@ -284,7 +284,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     );
   }
   
-// ✅ BUILD ORDER ITEMS WITH REVIEW BUTTONS
+// BUILD ORDER ITEMS WITH REVIEW BUTTONS
 Widget _buildOrderItems() {
   return Container(
     padding: const EdgeInsets.all(16),
@@ -304,7 +304,7 @@ Widget _buildOrderItems() {
               padding: const EdgeInsets.only(bottom: 16),
               child: Column(
                 children: [
-                  // ✅ WRAP PRODUCT INFO TRONG INKWELL
+                  // WRAP PRODUCT INFO TRONG INKWELL
                   InkWell(
                     onTap: () => _navigateToProductDetail(item.productId),
                     borderRadius: BorderRadius.circular(8),
@@ -317,7 +317,7 @@ Widget _buildOrderItems() {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // ✅ THÊM BADGE "Xem chi tiết"
+                          // THÊM BADGE "Xem chi tiết"
                           Stack(
                             children: [
                               ClipRRect(
@@ -342,7 +342,7 @@ Widget _buildOrderItems() {
                                         child: const Icon(Icons.image),
                                       ),
                               ),
-                              // ✅ ICON CHỈ DẪN
+                              // ICON CHỈ DẪN
                               Positioned(
                                 bottom: 4,
                                 right: 4,
@@ -383,7 +383,7 @@ Widget _buildOrderItems() {
                                         maxLines: 2,
                                       ),
                                     ),
-                                    // ✅ ICON CHỈ DẪN
+                                    // ICON CHỈ DẪN
                                     const Icon(
                                       Icons.chevron_right,
                                       color: AppColors.textSecondary,
@@ -426,7 +426,7 @@ Widget _buildOrderItems() {
                     ),
                   ),
 
-                  // ✅ REVIEW BUTTON (CHỈ HIỆN KHI COMPLETED)
+                  // REVIEW BUTTON (CHỈ HIỆN KHI COMPLETED)
                   if (_order!.status == 'completed') ...[
                     const SizedBox(height: 12),
                     _buildReviewButton(item),
@@ -439,12 +439,12 @@ Widget _buildOrderItems() {
   );
 }
 
-  // ✅ BUILD REVIEW BUTTON CHO TỪNG ITEM
+  // BUILD REVIEW BUTTON CHO TỪNG ITEM
   Widget _buildReviewButton(OrderItem item) {
     final isReviewed = _reviewStatus[item.productId] ?? false;
 
     if (isReviewed) {
-      // ✅ ĐÃ ĐÁNH GIÁ
+      // ĐÃ ĐÁNH GIÁ
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
@@ -470,7 +470,7 @@ Widget _buildOrderItems() {
       );
     }
 
-    // ✅ CHƯA ĐÁNH GIÁ - HIỂN THỊ NÚT
+    // CHƯA ĐÁNH GIÁ - HIỂN THỊ NÚT
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
@@ -492,10 +492,10 @@ Widget _buildOrderItems() {
     );
   }
 
-  // ✅ NAVIGATE TO REVIEW - TẠO PRODUCT MODEL TỪ ORDER ITEM
+  // NAVIGATE TO REVIEW - TẠO PRODUCT MODEL TỪ ORDER ITEM
   Future<void> _navigateToReview(OrderItem item) async {
     try {
-      // ✅ TẠO PRODUCT MODEL ĐƠN GIẢN TỪ ORDER ITEM
+      // TẠO PRODUCT MODEL ĐƠN GIẢN TỪ ORDER ITEM
       final simpleProduct = ProductModel(
         id: item.productId,
         name: item.productName,
@@ -517,7 +517,7 @@ Widget _buildOrderItems() {
         ],
       );
 
-      // ✅ NAVIGATE TO ADD REVIEW PAGE
+      // NAVIGATE TO ADD REVIEW PAGE
       final result = await Navigator.push(
         context,
         MaterialPageRoute(
@@ -528,7 +528,7 @@ Widget _buildOrderItems() {
         ),
       );
 
-      // ✅ REFRESH REVIEW STATUS NẾU ĐÃ REVIEW
+      // REFRESH REVIEW STATUS NẾU ĐÃ REVIEW
       if (result == true && mounted) {
         setState(() {
           _reviewStatus[item.productId] = true;
@@ -554,7 +554,7 @@ Widget _buildOrderItems() {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('❌ Có lỗi xảy ra: $e'),
+            content: Text('Có lỗi xảy ra: $e'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -875,7 +875,7 @@ Widget _buildOrderItems() {
     }
   }
 
-  // ✅ NAVIGATE TO PRODUCT DETAIL PAGE
+  // NAVIGATE TO PRODUCT DETAIL PAGE
 Future<void> _navigateToProductDetail(String productId) async {
   try {
     // Hiển thị loading
@@ -889,7 +889,7 @@ Future<void> _navigateToProductDetail(String productId) async {
 
     print('🔍 Fetching product: $productId');
 
-    // ✅ FETCH PRODUCT DETAIL TỪ API
+    // FETCH PRODUCT DETAIL TỪ API
     final response = await _apiClient.get('/api/products/$productId');
 
     // Đóng loading
@@ -898,9 +898,9 @@ Future<void> _navigateToProductDetail(String productId) async {
     if (response.statusCode == 200) {
       final product = ProductModel.fromJson(response.data['product']);
       
-      print('✅ Product loaded: ${product.name}');
+      print('Product loaded: ${product.name}');
 
-      // ✅ NAVIGATE TO PRODUCT DETAIL PAGE
+      // NAVIGATE TO PRODUCT DETAIL PAGE
       if (mounted) {
         await Navigator.push(
           context,
@@ -918,7 +918,7 @@ Future<void> _navigateToProductDetail(String productId) async {
       Navigator.pop(context);
     }
 
-    print('❌ Error fetching product: $e');
+    print('Error fetching product: $e');
 
     // Hiển thị lỗi
     if (mounted) {
@@ -929,7 +929,7 @@ Future<void> _navigateToProductDetail(String productId) async {
               const Icon(Icons.error_outline, color: Colors.white),
               const SizedBox(width: 12),
               Expanded(
-                child: Text('❌ Không thể tải thông tin sản phẩm: $e'),
+                child: Text('Không thể tải thông tin sản phẩm: $e'),
               ),
             ],
           ),

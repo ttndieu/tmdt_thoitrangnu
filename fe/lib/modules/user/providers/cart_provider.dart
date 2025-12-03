@@ -16,22 +16,22 @@ class CartProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   
-  // ✅ Tổng số lượng items (tất cả)
+  // Tổng số lượng items (tất cả)
   int get itemCount => _items.fold(0, (sum, item) => sum + item.quantity);
   
-  // ✅ Tổng tiền CHỈ của items được chọn
+  // Tổng tiền CHỈ của items được chọn
   double get totalAmount => _items
       .where((item) => item.selected)
       .fold(0, (sum, item) => sum + item.subtotal);
   
-  // ✅ Danh sách items được chọn
+  // Danh sách items được chọn
   List<CartItemModel> get selectedItems =>
       _items.where((item) => item.selected).toList();
   
-  // ✅ Số lượng items được chọn
+  // Số lượng items được chọn
   int get selectedCount => selectedItems.length;
   
-  // ✅ Check xem tất cả items có được chọn không
+  // Check xem tất cả items có được chọn không
   bool get isAllSelected {
     if (_items.isEmpty) return false;
     return _items.every((item) => item.selected);
@@ -40,7 +40,7 @@ class CartProvider with ChangeNotifier {
   bool get isEmpty => _items.isEmpty;
   bool get isNotEmpty => _items.isNotEmpty;
 
-  // ✅ Toggle selected cho 1 item (LOCAL ONLY)
+  // Toggle selected cho 1 item (LOCAL ONLY)
   void toggleItemSelection(String productId, String size, String color) {
     final index = _items.indexWhere(
       (item) =>
@@ -57,7 +57,7 @@ class CartProvider with ChangeNotifier {
     }
   }
 
-  // ✅ Chọn tất cả / Bỏ chọn tất cả (LOCAL ONLY)
+  // Chọn tất cả / Bỏ chọn tất cả (LOCAL ONLY)
   void toggleSelectAll() {
     final shouldSelectAll = !isAllSelected;
     
@@ -88,7 +88,7 @@ class CartProvider with ChangeNotifier {
       }
     } catch (e) {
       _error = e.toString();
-      print('❌ Error fetching cart: $e');
+      print('Error fetching cart: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -119,7 +119,7 @@ class CartProvider with ChangeNotifier {
       }
       return false;
     } catch (e) {
-      print('❌ Error adding to cart: $e');
+      print('Error adding to cart: $e');
       return false;
     }
   }
@@ -147,7 +147,7 @@ class CartProvider with ChangeNotifier {
       }
       return false;
     } catch (e) {
-      print('❌ Error updating quantity: $e');
+      print('Error updating quantity: $e');
       return false;
     }
   }
@@ -170,7 +170,7 @@ class CartProvider with ChangeNotifier {
       }
       return false;
     } catch (e) {
-      print('❌ Error removing item: $e');
+      print('Error removing item: $e');
       return false;
     }
   }
@@ -187,7 +187,7 @@ class CartProvider with ChangeNotifier {
       }
       return false;
     } catch (e) {
-      print('❌ Error clearing cart: $e');
+      print('Error clearing cart: $e');
       return false;
     }
   }

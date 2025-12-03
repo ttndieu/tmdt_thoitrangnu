@@ -6,7 +6,7 @@ import '../../constants/app_text_styles.dart';
 
 class HomeAppBar extends StatelessWidget {
   final String userName;
-  final String? avatarUrl; // ✅ THÊM
+  final String? avatarUrl; 
   final int cartCount;
   final int notificationCount;
   final VoidCallback onCartTap;
@@ -15,7 +15,7 @@ class HomeAppBar extends StatelessWidget {
   const HomeAppBar({
     Key? key,
     required this.userName,
-    this.avatarUrl, // ✅ THÊM
+    this.avatarUrl, 
     this.cartCount = 0,
     this.notificationCount = 0,
     required this.onCartTap,
@@ -42,7 +42,7 @@ class HomeAppBar extends StatelessWidget {
           Expanded(
             child: Row(
               children: [
-                // ✅ Avatar with Image
+                // Avatar with Image
                 Container(
                   width: 44,
                   height: 44,
@@ -58,7 +58,7 @@ class HomeAppBar extends StatelessWidget {
                     ],
                   ),
                   child: ClipOval(
-                    child: _buildAvatar(), // ✅ SỬA
+                    child: _buildAvatar(),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -110,7 +110,7 @@ class HomeAppBar extends StatelessWidget {
     );
   }
 
-  // ✅ THÊM FUNCTION HIỂN THỊ AVATAR
+  // THÊM FUNCTION HIỂN THỊ AVATAR
   Widget _buildAvatar() {
     if (avatarUrl != null && avatarUrl!.isNotEmpty) {
       return Image.network(
@@ -149,7 +149,7 @@ class HomeAppBar extends StatelessWidget {
   }
 }
 
-// ✅ GIỮ NGUYÊN _IconButton CLASS
+// GIỮ NGUYÊN _IconButton CLASS
 class _IconButton extends StatefulWidget {
   final IconData icon;
   final int badge;

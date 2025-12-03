@@ -23,7 +23,7 @@ class ReviewProvider with ChangeNotifier {
   int get totalPages => _totalPages;
   String get sortBy => _sortBy;
 
-  // ✅ FETCH REVIEWS BY PRODUCT
+  // FETCH REVIEWS BY PRODUCT
   Future<void> fetchProductReviews(
     String productId, {
     int page = 1,
@@ -63,18 +63,18 @@ class ReviewProvider with ChangeNotifier {
             int.tryParse(response.data['totalPages'].toString()) ?? 1;
         _sortBy = sort;
 
-        print('✅ Loaded ${_reviews.length} reviews (Page $page/$_totalPages)');
+        print('Loaded ${_reviews.length} reviews (Page $page/$_totalPages)');
       }
     } catch (e) {
       _error = 'Không thể tải đánh giá';
-      print('❌ Error fetching reviews: $e');
+      print('Error fetching reviews: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  // ✅ FETCH MY REVIEWS
+  // FETCH MY REVIEWS
   Future<void> fetchMyReviews() async {
     _isLoading = true;
     _error = null;
@@ -87,39 +87,39 @@ class ReviewProvider with ChangeNotifier {
         final List reviewsJson = response.data['reviews'] ?? [];
         _myReviews =
             reviewsJson.map((json) => ReviewModel.fromJson(json)).toList();
-        print('✅ Loaded ${_myReviews.length} my reviews');
+        print('Loaded ${_myReviews.length} my reviews');
       }
     } catch (e) {
       _error = 'Không thể tải đánh giá của bạn';
-      print('❌ Error fetching my reviews: $e');
+      print('Error fetching my reviews: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  // ✅ CHECK CAN REVIEW
+  // CHECK CAN REVIEW
   Future<CanReviewResponse?> checkCanReview(String productId) async {
     try {
-      print('\n🔍 Checking can review for product: $productId');
+      print('\nChecking can review for product: $productId');
 
       final response = await _apiClient.get(
         ApiConfig.canReview(productId),
       );
 
-      print('📥 Can review response: ${response.data}');
+      print('Can review response: ${response.data}');
 
       if (response.statusCode == 200) {
         return CanReviewResponse.fromJson(response.data);
       }
     } catch (e) {
-      print('❌ Error checking can review: $e');
+      print('Error checking can review: $e');
       _error = e.toString();
     }
     return null;
   }
 
-  // ✅ CREATE REVIEW
+  // CREATE REVIEW
   Future<bool> createReview({
     required String productId,
     required String orderId,
@@ -128,11 +128,11 @@ class ReviewProvider with ChangeNotifier {
     List<Map<String, String>>? images,
   }) async {
     try {
-      print('\n⭐ ========== CREATE REVIEW (FLUTTER) ==========');
-      print('📦 Product: $productId');
-      print('📝 Order: $orderId');
-      print('⭐ Rating: $rating');
-      print('💬 Comment: $comment');
+      print('\n========== CREATE REVIEW (FLUTTER) ==========');
+      print('Product: $productId');
+      print('Order: $orderId');
+      print('Rating: $rating');
+      print('Comment: $comment');
 
       final response = await _apiClient.post(
         ApiConfig.REVIEWS,
@@ -148,18 +148,18 @@ class ReviewProvider with ChangeNotifier {
       print('🔍 Create review response: ${response.statusCode}');
 
       if (response.statusCode == 201 || response.statusCode == 200) {
-        print('✅ Review created successfully');
-        print('⭐ ========== CREATE REVIEW END ==========\n');
+        print('Review created successfully');
+        print('========== CREATE REVIEW END ==========\n');
         return true;
       }
     } catch (e) {
-      print('❌ Error creating review: $e');
+      print('Error creating review: $e');
       _error = e.toString();
     }
     return false;
   }
 
-  // ✅ UPDATE REVIEW
+  // UPDATE REVIEW
   Future<bool> updateReview({
     required String reviewId,
     int? rating,
@@ -167,7 +167,7 @@ class ReviewProvider with ChangeNotifier {
     List<Map<String, String>>? images,
   }) async {
     try {
-      print('\n✏️ Updating review: $reviewId');
+      print('\n Updating review: $reviewId');
 
       final response = await _apiClient.put(
         ApiConfig.updateReview(reviewId),
@@ -179,20 +179,20 @@ class ReviewProvider with ChangeNotifier {
       );
 
       if (response.statusCode == 200) {
-        print('✅ Review updated successfully');
+        print('Review updated successfully');
         return true;
       }
     } catch (e) {
-      print('❌ Error updating review: $e');
+      print('Error updating review: $e');
       _error = e.toString();
     }
     return false;
   }
 
-  // ✅ DELETE REVIEW
+  // DELETE REVIEW
   Future<bool> deleteReview(String reviewId) async {
     try {
-      print('\n🗑️ Deleting review: $reviewId');
+      print('\n Deleting review: $reviewId');
 
       final response = await _apiClient.delete(
         ApiConfig.deleteReview(reviewId),
@@ -202,24 +202,24 @@ class ReviewProvider with ChangeNotifier {
         _reviews.removeWhere((r) => r.id == reviewId);
         _myReviews.removeWhere((r) => r.id == reviewId);
         notifyListeners();
-        print('✅ Review deleted successfully');
+        print('Review deleted successfully');
         return true;
       }
     } catch (e) {
-      print('❌ Error deleting review: $e');
+      print('Error deleting review: $e');
       _error = e.toString();
     }
     return false;
   }
 
-  // ✅ CHANGE SORT
+  // CHANGE SORT
   Future<void> changeSortBy(String productId, String sort) async {
     _sortBy = sort;
     _currentPage = 1;
     await fetchProductReviews(productId, page: 1, sort: sort);
   }
 
-  // ✅ LOAD MORE
+  // LOAD MORE
   Future<void> loadMore(String productId) async {
     if (_currentPage < _totalPages && !_isLoading) {
       await fetchProductReviews(

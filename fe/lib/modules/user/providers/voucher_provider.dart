@@ -20,7 +20,7 @@ class VoucherProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  // ✅ Fetch tất cả vouchers
+  // Fetch tất cả vouchers
   Future<void> fetchVouchers() async {
     _isLoading = true;
     _error = null;
@@ -44,14 +44,14 @@ class VoucherProvider with ChangeNotifier {
       }
     } catch (e) {
       _error = 'Không thể tải danh sách voucher';
-      print('❌ Fetch vouchers error: $e');
+      print('Fetch vouchers error: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  // ✅ Apply voucher (validate)
+  // Apply voucher (validate)
   Future<Map<String, dynamic>?> applyVoucher({
     required String code,
     required double totalAmount,
@@ -95,20 +95,20 @@ class VoucherProvider with ChangeNotifier {
       }
     } catch (e) {
       _error = _parseError(e.toString());
-      print('❌ Apply voucher error: $e');
+      print('Apply voucher error: $e');
     }
     
     return null;
   }
 
-  // ✅ Remove applied voucher
+  // Remove applied voucher
   void removeVoucher() {
     _appliedVoucher = null;
     _error = null;
     notifyListeners();
   }
 
-  // ✅ Refresh
+  // Refresh
   Future<void> refresh() async {
     await fetchVouchers();
   }

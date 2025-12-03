@@ -21,14 +21,14 @@ class NotificationProvider with ChangeNotifier {
   int get unreadCount => _unreadCount;
   String get selectedFilter => _currentFilter;
 
-  // ✅ FETCH NOTIFICATIONS (Backend đã filter voucher/promotion)
+  // FETCH NOTIFICATIONS (Backend đã filter voucher/promotion)
   Future<void> fetchNotifications() async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      print('\n📡 ========== FETCH NOTIFICATIONS ==========');
+      print('\n ========== FETCH NOTIFICATIONS ==========');
       
       final response = await _apiClient.get(ApiConfig.NOTIFICATIONS);
 
@@ -41,12 +41,12 @@ class NotificationProvider with ChangeNotifier {
               .map((json) => NotificationModel.fromJson(json))
               .toList();
           
-          print('📊 Loaded ${_allNotifications.length} notifications');
+          print('Loaded ${_allNotifications.length} notifications');
           
           // Apply current filter
           _applyFilter(_currentFilter);
           
-          // ✅ LẤY UNREAD COUNT TỪ API
+          // LẤY UNREAD COUNT TỪ API
           if (data.containsKey('unreadCount')) {
             _unreadCount = data['unreadCount'] is int 
                 ? data['unreadCount'] 
@@ -56,7 +56,7 @@ class NotificationProvider with ChangeNotifier {
             _unreadCount = _allNotifications.where((n) => !n.isRead).length;
           }
           
-          print('🔔 Unread count: $_unreadCount');
+          print('Unread count: $_unreadCount');
           
           // Debug: Show notification types
           final typeCounts = <String, int>{};
@@ -64,10 +64,10 @@ class NotificationProvider with ChangeNotifier {
             final typeStr = n.type.toString().split('.').last;
             typeCounts[typeStr] = (typeCounts[typeStr] ?? 0) + 1;
           }
-          print('📋 Types: $typeCounts');
+          print('Types: $typeCounts');
           
         } else {
-          print('⚠️ No notifications in response');
+          print('No notifications in response');
           _allNotifications = [];
           _applyFilter(_currentFilter);
           _unreadCount = 0;
@@ -77,14 +77,14 @@ class NotificationProvider with ChangeNotifier {
       }
     } catch (e) {
       _error = 'Không thể tải thông báo';
-      print('❌ Fetch notifications error: $e\n');
+      print('Fetch notifications error: $e\n');
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  // ✅ APPLY FILTER
+  // APPLY FILTER
   void _applyFilter(String filter) {
     _currentFilter = filter;
     
@@ -114,14 +114,14 @@ class NotificationProvider with ChangeNotifier {
     }
   }
 
-  // ✅ SET FILTER
+  // SET FILTER
   void setFilter(String filter) {
     print('🔄 Filter changed: $filter');
     _applyFilter(filter);
     notifyListeners();
   }
 
-  // ✅ GET COUNT BY TYPE
+  // GET COUNT BY TYPE
   int getCountByType(String type) {
     if (type == 'all') return _allNotifications.length;
     
@@ -143,7 +143,7 @@ class NotificationProvider with ChangeNotifier {
     return _allNotifications.where((n) => n.type == filterType).length;
   }
 
-  // ✅ CHECK UNREAD BY TYPE
+  // CHECK UNREAD BY TYPE
   bool hasUnreadByType(String type) {
     if (type == 'all') {
       return _allNotifications.any((n) => !n.isRead);
@@ -167,17 +167,17 @@ class NotificationProvider with ChangeNotifier {
     return _allNotifications.any((n) => n.type == filterType && !n.isRead);
   }
 
-  // ✅ MARK AS READ
+  // MARK AS READ
   Future<void> markAsRead(String notificationId) async {
     try {
-      print('\n📝 ========== MARK AS READ ==========');
-      print('📝 Notification ID: $notificationId');
+      print('\n========== MARK AS READ ==========');
+      print('Notification ID: $notificationId');
       
       // Find notification
       final index = _allNotifications.indexWhere((n) => n.id == notificationId);
       if (index == -1) {
-        print('❌ Notification not found');
-        print('📝 ========== MARK AS READ END ==========\n');
+        print('Notification not found');
+        print('========== MARK AS READ END ==========\n');
         return;
       }
       
@@ -185,13 +185,13 @@ class NotificationProvider with ChangeNotifier {
       
       // Skip if already read
       if (notification.isRead) {
-        print('ℹ️ Already read, skipping');
-        print('📝 ========== MARK AS READ END ==========\n');
+        print('Already read, skipping');
+        print('========== MARK AS READ END ==========\n');
         return;
       }
       
-      print('📝 Title: "${notification.title}"');
-      print('📝 Type: ${notification.type}');
+      print('Title: "${notification.title}"');
+      print('Type: ${notification.type}');
       
       // Call API
       final response = await _apiClient.put(
@@ -210,22 +210,22 @@ class NotificationProvider with ChangeNotifier {
         // Re-apply filter
         _applyFilter(_currentFilter);
         
-        print('✅ Marked as read');
-        print('🔔 New unread count: $_unreadCount');
-        print('📝 ========== MARK AS READ END ==========\n');
+        print('Marked as read');
+        print('New unread count: $_unreadCount');
+        print('========== MARK AS READ END ==========\n');
         
         notifyListeners();
       }
     } catch (e) {
-      print('❌ Mark as read error: $e\n');
+      print('Mark as read error: $e\n');
       // Don't throw - just log
     }
   }
 
-  // ✅ MARK ALL AS READ
+  // MARK ALL AS READ
   Future<void> markAllAsRead() async {
     try {
-      print('\n📝 ========== MARK ALL AS READ ==========');
+      print('\n========== MARK ALL AS READ ==========');
       
       final response = await _apiClient.put(
         ApiConfig.NOTIFICATIONS_READ_ALL,
@@ -243,22 +243,22 @@ class NotificationProvider with ChangeNotifier {
         // Re-apply filter
         _applyFilter(_currentFilter);
         
-        print('✅ Marked all as read');
-        print('📝 ========== MARK ALL AS READ END ==========\n');
+        print('Marked all as read');
+        print('========== MARK ALL AS READ END ==========\n');
         
         notifyListeners();
       }
     } catch (e) {
-      print('❌ Mark all as read error: $e\n');
+      print('Mark all as read error: $e\n');
       throw e; // Re-throw for UI to handle
     }
   }
 
-  // ✅ DELETE NOTIFICATION
+  // DELETE NOTIFICATION
   Future<void> deleteNotification(String notificationId) async {
     try {
-      print('\n🗑️ ========== DELETE NOTIFICATION ==========');
-      print('🗑️ Notification ID: $notificationId');
+      print('\n========== DELETE NOTIFICATION ==========');
+      print('Notification ID: $notificationId');
       
       final response = await _apiClient.delete(
         ApiConfig.deleteNotification(notificationId),
@@ -284,19 +284,19 @@ class NotificationProvider with ChangeNotifier {
         // Re-apply filter
         _applyFilter(_currentFilter);
         
-        print('✅ Deleted');
-        print('🔔 New unread count: $_unreadCount');
-        print('🗑️ ========== DELETE NOTIFICATION END ==========\n');
+        print('Deleted');
+        print('New unread count: $_unreadCount');
+        print('========== DELETE NOTIFICATION END ==========\n');
         
         notifyListeners();
       }
     } catch (e) {
-      print('❌ Delete notification error: $e\n');
+      print('Delete notification error: $e\n');
       throw e; // Re-throw for UI to handle
     }
   }
 
-  // ✅ FETCH UNREAD COUNT (for badge updates)
+  // FETCH UNREAD COUNT (for badge updates)
   Future<void> fetchUnreadCount() async {
     try {
       final response = await _apiClient.get(
@@ -309,11 +309,11 @@ class NotificationProvider with ChangeNotifier {
             ? count 
             : int.tryParse(count.toString()) ?? 0;
         
-        print('🔔 Updated unread count: $_unreadCount');
+        print('Updated unread count: $_unreadCount');
         notifyListeners();
       }
     } catch (e) {
-      print('❌ Fetch unread count error: $e');
+      print('Fetch unread count error: $e');
       // Don't throw - just log
     }
   }

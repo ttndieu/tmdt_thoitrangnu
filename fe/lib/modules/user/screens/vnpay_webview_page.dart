@@ -6,7 +6,7 @@ import '../constants/app_color.dart';
 
 class VNPayWebViewPage extends StatefulWidget {
   final String paymentUrl;
-  final String intentId; // ✅ DÙNG intentId
+  final String intentId; // DÙNG intentId
 
   const VNPayWebViewPage({
     Key? key,
@@ -35,16 +35,16 @@ class _VNPayWebViewPageState extends State<VNPayWebViewPage> {
         NavigationDelegate(
           onPageStarted: (String url) {
             setState(() => _isLoading = true);
-            print('🔗 Page loading: $url');
+            print('Page loading: $url');
           },
           onPageFinished: (String url) {
             setState(() => _isLoading = false);
-            print('✅ Page loaded: $url');
+            print('Page loaded: $url');
           },
           onNavigationRequest: (NavigationRequest request) {
-            print('🧭 Navigation request: ${request.url}');
+            print('Navigation request: ${request.url}');
 
-            // ✅ BẮT CALLBACK
+            // BẮT CALLBACK
             if (request.url.startsWith('myapp://payment/result')) {
               _handlePaymentResult(request.url);
               return NavigationDecision.prevent;
@@ -61,11 +61,11 @@ class _VNPayWebViewPageState extends State<VNPayWebViewPage> {
     final success = uri.queryParameters['success'] == 'true';
     final intentId = uri.queryParameters['intentId'];
 
-    print('🎯 Payment result received:');
-    print('   Success: $success');
-    print('   Intent ID: $intentId');
+    print(' Payment result received:');
+    print(' Success: $success');
+    print(' Intent ID: $intentId');
 
-    // ✅ VỀ LẠI CHECKOUT với result
+    // VỀ LẠI CHECKOUT với result
     Navigator.of(context).pop(success);
   }
 

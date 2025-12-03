@@ -32,7 +32,7 @@ export const getWishlist = async (req, res) => {
       wishlist: validWishlist 
     });
   } catch (err) {
-    console.error("❌ Get wishlist error:", err);
+    console.error("Get wishlist error:", err);
     return res.status(500).json({ 
       success: false,
       message: err.message 

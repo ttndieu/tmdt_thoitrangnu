@@ -31,10 +31,6 @@ export const updateProfile = async (req, res) => {
 export const changePassword = async (req, res) => {
   try {
     const { oldPassword, newPassword } = req.body;
-
-    console.log('\n🔐 ========== CHANGE PASSWORD ==========');
-    console.log('👤 User ID:', req.user._id);
-
     // Validate input
     if (!oldPassword || !newPassword) {
       return res.status(400).json({ 
@@ -57,7 +53,6 @@ export const changePassword = async (req, res) => {
     // Kiểm tra mật khẩu cũ
     const isMatch = await bcrypt.compare(oldPassword, user.password);
     if (!isMatch) {
-      console.log('❌ Old password incorrect');
       return res.status(400).json({ 
         message: "Mật khẩu cũ không chính xác" 
       });
@@ -68,15 +63,12 @@ export const changePassword = async (req, res) => {
     user.password = hashedPassword;
     await user.save();
 
-    console.log('✅ Password changed successfully');
-    console.log('🔐 ========== CHANGE PASSWORD END ==========\n');
-
     return res.json({ 
       message: "Đổi mật khẩu thành công" 
     });
 
   } catch (err) {
-    console.error('❌ Change password error:', err);
+    console.error('Change password error:', err);
     return res.status(500).json({ message: err.message });
   }
 };
