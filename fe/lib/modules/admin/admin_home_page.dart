@@ -1,3 +1,4 @@
+// lib/modules/admin/admin_home_page.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -5,11 +6,10 @@ import 'admin_provider.dart';
 import 'admin_routes.dart';
 import 'admin_menu.dart';
 
-// Widgets
 import 'widgets/admin_sidebar.dart';
 import 'widgets/admin_header.dart';
+import 'widgets/admin_bottom_bar.dart';
 
-// Pages
 import 'products/products_page.dart';
 import 'products/product_form_page.dart';
 import 'products/product_detail_admin.dart';
@@ -30,6 +30,7 @@ class AdminHomePage extends StatefulWidget {
 
 class _AdminHomePageState extends State<AdminHomePage> {
   final searchController = TextEditingController();
+
   String _getPageTitle(String route) {
     final item = adminMenuItems.firstWhere(
       (e) => e['route'] == route,
@@ -46,52 +47,44 @@ class _AdminHomePageState extends State<AdminHomePage> {
 
     return Scaffold(
       drawer: !isDesktop ? const Drawer(child: AdminSidebar()) : null,
+      bottomNavigationBar: !isDesktop ? const AdminBottomBar() : null,
 
       body: Row(
         children: [
-          // ---------------------- SIDEBAR (CỘT 1) ----------------------
           if (isDesktop) const AdminSidebar(),
 
-          // ---------------------- CỘT 2 = HEADER + CONTENT ----------------------
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // HEADER
-                AdminHeader(
-                  controller: searchController,
-                  isDesktop: isDesktop,
-                  onSearch: _triggerSearch,
+                SafeArea(
+                  bottom: false,
+                  child: AdminHeader(
+                    controller: searchController,
+                    isDesktop: isDesktop,
+                    onSearch: _triggerSearch,
+                  ),
                 ),
 
-                // 🔥 MOBILE ONLY: HIỂN THỊ TÊN MENU ĐANG CHỌN
                 if (!isDesktop)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 14,
-                    ),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFF3E7F1), // hồng nhạt
-                      border: Border(
-                        bottom: BorderSide(color: Color.fromARGB(50, 0, 0, 0)),
-                      ),
-                    ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Text(
                       _getPageTitle(admin.currentRoute),
                       style: const TextStyle(
                         fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: Color.fromARGB(255, 136, 79, 125),
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF874A7A),
                       ),
                     ),
                   ),
 
-                // CONTENT
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: _getPage(admin),
+                    padding: const EdgeInsets.all(18),
+                    child: KeyedSubtree(
+                      key: ValueKey(admin.currentRoute),
+                      child: _getPage(admin),
+                    ),
                   ),
                 ),
               ],
@@ -102,7 +95,6 @@ class _AdminHomePageState extends State<AdminHomePage> {
     );
   }
 
-  // Load đúng page theo route
   Widget _getPage(AdminProvider admin) {
     switch (admin.currentRoute) {
       case AdminRoutes.productDetail:
@@ -117,15 +109,10 @@ class _AdminHomePageState extends State<AdminHomePage> {
         return OrderDetailAdmin(order: admin.selectedOrder!);
     }
 
-    return adminMenuItems.firstWhere(
-      (e) => e['route'] == admin.currentRoute,
-    )['page'];
+    return adminMenuItems
+        .firstWhere((e) => e['route'] == admin.currentRoute)['page'];
   }
 
-  // Search
-  // void _triggerSearch(String v) {
-  //   v = v.trim().toLowerCase();
-  // }
   void _triggerSearch(String query) {
     query = query.trim().toLowerCase();
 
